@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sistema de Limpieza por Zonas</title>
+
+<link rel="icon" href="data:,">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="./assets/css/tokens.css">
+<link rel="stylesheet" href="./assets/css/base.css">
+<link rel="stylesheet" href="./assets/css/layout.css">
+<link rel="stylesheet" href="./assets/css/components.css">
+<link rel="stylesheet" href="./assets/css/pages.css">
+</head>
+
+<body>
+  <div class="app" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand__logo">AG</div>
+        <div class="brand__text">
+          <div class="brand__name">Limpieza</div>
+          <div class="brand__sub">Control por Zonas</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav__item is-active" href="#/dashboard" data-route="dashboard">
+          <span class="nav__dot"></span> Dashboard
+        </a>
+        <a class="nav__item" href="#/zonas" data-route="zonas">
+          <span class="nav__dot"></span> Zonas
+        </a>
+        <a class="nav__item" href="#/tareas" data-route="tareas">
+          <span class="nav__dot"></span> Tareas
+        </a>
+        <a class="nav__item" href="#/personal" data-route="personal">
+          <span class="nav__dot"></span> Personal
+        </a>
+        <a class="nav__item" href="#/historial" data-route="historial">
+          <span class="nav__dot"></span> Historial
+        </a>
+        <a class="nav__item" href="#/reportes" data-route="reportes">
+          <span class="nav__dot"></span> Reportes
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <div class="userchip">
+          <div class="userchip__avatar">M</div>
+          <div class="userchip__meta">
+            <div class="userchip__name" id="chipName">Modo demo</div>
+            <div class="userchip__role" id="chipRole">Web App</div>
+          </div>
+        </div>
+
+        <!-- 👇 opcional: botones de prueba -->
+        <button class="btn btn--ghost w-full" id="btnLoginDemo">Login demo (Firebase)</button>
+        <button class="btn btn--ghost w-full" id="btnLogoutDemo">Logout</button>
+
+        <button class="btn btn--ghost w-full" id="btnToggleTheme">Tema</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="iconbtn only-mobile" id="btnToggleSidebar" aria-label="Abrir menú">☰</button>
+
+        <div class="topbar__left">
+          <div class="crumbs" id="crumbs">Dashboard</div>
+          <div class="topbar__hint">Sistema de Gestión y Control de Limpieza por Zonas</div>
+        </div>
+
+        <div class="topbar__right">
+          <div class="pill" id="pillStatus">Desconectado</div>
+          <button class="btn btn--primary" id="btnQuickAdd">+ Nuevo</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div id="view"></div>
+      </section>
+
+      <footer class="footer">
+        <span>© Apodaca Group · Limpieza por Zonas</span>
+        <span class="muted">v0.1 (front-end)</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close="1"></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal__head">
+        <h3 class="modal__title" id="modalTitle">Acción</h3>
+        <button class="iconbtn" data-close="1" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal__body" id="modalBody"></div>
+      <div class="modal__foot" id="modalFoot"></div>
+    </div>
+  </div>
+
+  <!-- ✅ IMPORTANTE: usa ruta relativa con ./ para Live Server -->
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+.h1{ font-size: 22px; margin:0; }
+.sub{ color: var(--muted); margin-top:6px; }
+
+.section{
+  padding: 16px;
+}
+
+.kpi{
+  padding: 16px;
+}
+.kpi__top{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-bottom: 10px;
+}
+.kpi__value{
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.kpi__label{ color: var(--muted); font-size: 13px; }
+
+.table{
+  width:100%;
+  border-collapse: collapse;
+  overflow:hidden;
+  border-radius: var(--r16);
+  border:1px solid var(--border);
+}
+.table th, .table td{
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align:left;
+}
+.table th{ color: var(--muted); font-weight:600; font-size: 13px; }
+.table tr:hover td{ background: rgba(255,255,255,.04); }
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 12px;
+}
+.toolbar__left, .toolbar__right{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+}
