@@ -1,18 +1,11 @@
 // assets/js/pages/personal.js
-import { db } from "../firebase/config.js";
 import { StatusUI } from "../ui.js";
 import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  personalList,
+  personalCreate,
+  personalUpdate,
+  personalDelete
+} from "../firebase/personal.db.js";
 
 export const Personal = { view, mount };
 
@@ -24,7 +17,7 @@ function view() {
         <div class="toolbar__left">
           <div>
             <h1 class="h1">Personal</h1>
-            <p class="sub">Alta y listado de empleados (Firestore: users).</p>
+            <p class="sub">Alta y listado de empleados (API REST: /api/personal).</p>
           </div>
         </div>
 
@@ -70,7 +63,6 @@ function mount() {
 
   const modal = qs("#empModal");
   const mTitle = qs("#empModalTitle");
-  const mUid = qs("#empUid");
   const mNombre = qs("#empNombre");
   const mCorreo = qs("#empCorreo");
   const mRol = qs("#empRol");
@@ -81,7 +73,7 @@ function mount() {
   const msg = qs("#empMsg");
 
   let rows = [];
-  let editingUid = null;
+  let editingId = null;
 
   btnNew?.addEventListener("click", openModalForCreate);
   btnCancel?.addEventListener("click", closeModal);
@@ -98,7 +90,7 @@ function mount() {
     const act = btn.dataset.act;
     const id = btn.dataset.id;
 
-    const u = rows.find(x => x.id === id);
+    const u = rows.find(x => String(x.id) === String(id));
     if (!u) return;
 
     try {
@@ -108,9 +100,11 @@ function mount() {
       }
 
       if (act === "del") {
-        const ok = confirm(`¿Eliminar perfil "${u.nombre}"?\n\nEsto SOLO borra Firestore (users).`);
+        const ok = confirm(`¿Eliminar empleado "${u.nombre}"?\n\nEsto borra el registro desde la API.`);
         if (!ok) return;
-        await deleteDoc(doc(db, "users", id));
+
+        await personalDelete(id);
+        StatusUI?.ok?.("Empleado eliminado.");
         await load();
         return;
       }
@@ -126,37 +120,23 @@ function mount() {
     btnSave.disabled = true;
 
     try {
-      const uid = (mUid.value || "").trim();
       const nombre = (mNombre.value || "").trim();
-      const correo = (mCorreo.value || "").trim();
+      const correo = (mCorreo.value || "").trim().toLowerCase();
       const rol = (mRol.value || "").trim().toLowerCase();
       const activo = !!mActivo.checked;
 
-      if (!uid) throw new Error("Falta UID (de Authentication).");
       if (!nombre) throw new Error("Falta nombre.");
       if (!correo) throw new Error("Falta correo.");
       if (!rol) throw new Error("Falta rol.");
 
-      const ref = doc(db, "users", uid);
-      const exists = await getDoc(ref).then(s => s.exists());
-
-      if (!exists) {
-        await setDoc(ref, {
-          nombre,
-          correo,
-          rol,
-          activo,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+      // Crear
+      if (!editingId) {
+        await personalCreate({ nombre, correo, rol, activo });
+        StatusUI?.ok?.("Empleado registrado.");
       } else {
-        await updateDoc(ref, {
-          nombre,
-          correo,
-          rol,
-          activo,
-          updatedAt: serverTimestamp()
-        });
+        // Editar (patch)
+        await personalUpdate(editingId, { nombre, correo, rol, activo });
+        StatusUI?.ok?.("Empleado actualizado.");
       }
 
       closeModal();
@@ -175,9 +155,21 @@ function mount() {
     tbody.innerHTML = `<tr><td colspan="5" class="muted">Cargando personal...</td></tr>`;
 
     try {
-      const q = query(collection(db, "users"), orderBy("nombre", "asc"));
-      const snap = await getDocs(q);
-      rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = await personalList();
+console.log("API /personal data:", data);
+
+      // Normaliza: el backend puede devolver _id, id, uid, etc.
+      rows = (Array.isArray(data) ? data : []).map(x => ({
+        id: x.id ?? x._id ?? x.uid ?? x.docId ?? x.key ?? null,
+        nombre: x.nombre ?? "",
+        correo: x.correo ?? "",
+        rol: (x.rol ?? "empleado").toLowerCase(),
+        activo: x.activo ?? true
+      })).filter(x => x.id != null);
+
+      // orden por nombre (por si la API no ordena)
+      rows.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
+
       renderTable(filterRows(rows, search.value));
     } catch (e) {
       console.error(e);
@@ -210,8 +202,8 @@ function mount() {
           <td>${rolPill}</td>
           <td>${estadoBadge}</td>
           <td style="text-align:right;">
-            <button class="btn btn--ghost" data-act="edit" data-id="${u.id}">Editar</button>
-            <button class="btn btn--danger" data-act="del" data-id="${u.id}">Eliminar</button>
+            <button class="btn btn--ghost" data-act="edit" data-id="${esc(u.id)}">Editar</button>
+            <button class="btn btn--danger" data-act="del" data-id="${esc(u.id)}">Eliminar</button>
           </td>
         </tr>
       `;
@@ -221,32 +213,28 @@ function mount() {
   }
 
   function openModalForCreate() {
-    editingUid = null;
+    editingId = null;
     mTitle.textContent = "Nuevo empleado";
     msg.textContent = "";
 
-    mUid.value = "";
     mNombre.value = "";
     mCorreo.value = "";
     mRol.value = "empleado";
     mActivo.checked = true;
 
-    mUid.disabled = false;
     openModal();
   }
 
   function openModalForEdit(u) {
-    editingUid = u.id;
+    editingId = u.id;
     mTitle.textContent = "Editar empleado";
     msg.textContent = "";
 
-    mUid.value = u.id;
     mNombre.value = u.nombre || "";
     mCorreo.value = u.correo || "";
     mRol.value = (u.rol || "empleado").toLowerCase();
     mActivo.checked = !!u.activo;
 
-    mUid.disabled = true;
     openModal();
   }
 
@@ -262,9 +250,7 @@ function mount() {
   }
 }
 
-
-  // Modal markup
-
+// Modal markup (SIN UID)
 function modalMarkup() {
   return `
   <div id="empModal" class="modal" aria-hidden="true">
@@ -278,9 +264,13 @@ function modalMarkup() {
       <div class="modal__body">
         <div class="grid2">
           <div class="field">
-            <label>UID (Authentication) *</label>
-            <input id="empUid" class="input" placeholder="Pega el UID del usuario (Auth)" />
-            <small class="muted">El ID del documento será este UID.</small>
+            <label>Nombre *</label>
+            <input id="empNombre" class="input" placeholder="Nombre completo" />
+          </div>
+
+          <div class="field">
+            <label>Correo *</label>
+            <input id="empCorreo" class="input" placeholder="correo@empresa.com" />
           </div>
 
           <div class="field">
@@ -290,16 +280,6 @@ function modalMarkup() {
               <option value="supervisor">supervisor</option>
               <option value="admin">admin</option>
             </select>
-          </div>
-
-          <div class="field">
-            <label>Nombre *</label>
-            <input id="empNombre" class="input" placeholder="Nombre completo" />
-          </div>
-
-          <div class="field">
-            <label>Correo *</label>
-            <input id="empCorreo" class="input" placeholder="correo@empresa.com" />
           </div>
 
           <div class="field">
@@ -323,9 +303,7 @@ function modalMarkup() {
   </div>`;
 }
 
-
-   // Utils
-
+// Utils
 function qs(sel, root = document) { return root.querySelector(sel); }
 
 function esc(s) {

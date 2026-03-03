@@ -5,6 +5,7 @@ import { Theme } from "./ui.js";
 
 import { watchAuth, getMyProfile, logout } from "./firebase/auth.js";
 
+
 import { Login } from "./pages/login.js";
 import { Dashboard } from "./pages/dashboard.js";
 import { Zonas } from "./pages/zonas.js";
@@ -23,7 +24,7 @@ if (view) {
   view.innerHTML = `<section class="card section"><p class="sub">Cargando sesión…</p></section>`;
 }
 
-// inicia router solo cuando ya sepamos si hay sesión o no
+// router (solo 1 vez)
 let routerStarted = false;
 function startRouterOnce() {
   if (routerStarted) return;
@@ -31,7 +32,58 @@ function startRouterOnce() {
   routerStarted = true;
 }
 
-//  Auth watcher
+/* =========================
+   SIDEBAR TOGGLE (PRO)
+   Desktop: colapsa (body.sidebar-collapsed)
+   Mobile: drawer (.sidebar.is-open)
+========================= */
+const btnSidebar = document.getElementById("btnToggleSidebar");
+const sidebarEl = document.getElementById("sidebar");
+
+function isMobile() {
+  return window.matchMedia("(max-width: 980px)").matches;
+}
+
+function applySavedSidebarState() {
+  const collapsed = localStorage.getItem("sidebarCollapsed") === "true";
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+
+  // en móvil, si está colapsado, aseguramos drawer cerrado
+  if (isMobile()) sidebarEl?.classList.remove("is-open");
+}
+
+applySavedSidebarState();
+
+btnSidebar?.addEventListener("click", () => {
+  if (isMobile()) {
+    // móvil: abre/cierra drawer
+    const willOpen = !sidebarEl?.classList.contains("is-open");
+    sidebarEl?.classList.toggle("is-open", willOpen);
+
+    // guardamos como "no colapsado" si abrió, "colapsado" si cerró
+    document.body.classList.toggle("sidebar-collapsed", !willOpen);
+    localStorage.setItem("sidebarCollapsed", String(!willOpen));
+    return;
+  }
+
+  // desktop: colapsa sidebar
+  document.body.classList.toggle("sidebar-collapsed");
+  localStorage.setItem(
+    "sidebarCollapsed",
+    String(document.body.classList.contains("sidebar-collapsed"))
+  );
+});
+
+// al cambiar tamaño, evita estados raros
+window.addEventListener("resize", () => {
+  if (!isMobile()) {
+    sidebarEl?.classList.remove("is-open");
+  }
+});
+
+/* =========================
+   AUTH WATCHER
+========================= */
 watchAuth(async (user) => {
   try {
     if (!user) {
@@ -84,7 +136,7 @@ function boot(session) {
   const isSupervisor = rol === "supervisor";
   const isManager = isAdmin || isSupervisor;
 
-  //  vistas base 
+  // vistas base
   window.Views = {
     login: Login.view,
     dashboard: Dashboard.view,
@@ -109,7 +161,7 @@ function boot(session) {
     window.ViewMount.historial = Historial.mount;
     window.ViewMount.reportes = Reportes.mount;
   } else {
-  
+    // si empleado intenta entrar a vistas manager, lo mandamos a tareas
     const r = (location.hash || "").replace("#/", "");
     if (["zonas", "personal", "historial", "reportes"].includes(r)) {
       location.hash = "#/tareas";
@@ -120,6 +172,10 @@ function boot(session) {
 }
 
 function applySessionUI(session, { isManager }) {
+  // Oculta botones demo si existen en HTML
+  document.getElementById("btnLoginDemo")?.remove();
+  document.getElementById("btnLogoutDemo")?.remove();
+
   const nameEl = document.querySelector(".userchip__name");
   const roleEl = document.querySelector(".userchip__role");
   const avatarEl = document.querySelector(".userchip__avatar");
@@ -147,21 +203,31 @@ function applySessionUI(session, { isManager }) {
   setNavVisible("historial", isManager);
   setNavVisible("reportes", isManager);
 
-  // Logout
+  // ✅ Logout profesional: 1 solo botón (si hay sesión)
   const footer = document.querySelector(".sidebar__footer");
-  if (footer) {
-    let btn = document.getElementById("btnLogout");
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.id = "btnLogout";
-      btn.className = "btn btn--ghost w-full";
-      btn.textContent = "Cerrar sesión";
-      btn.addEventListener("click", async () => {
-        await logout();
-        boot(null);
-        location.hash = "#/login";
-      });
-      footer.appendChild(btn);
-    }
+
+  // si no hay sesión: elimina botón logout si existe
+  const existing = document.getElementById("btnLogout");
+  if (!session) {
+    existing?.remove();
+    return;
+  }
+
+  // si hay sesión: crea si no existe
+  if (footer && !existing) {
+    const btn = document.createElement("button");
+    btn.id = "btnLogout";
+    btn.className = "btn btn--ghost w-full";
+    btn.textContent = "Cerrar sesión";
+    btn.addEventListener("click", async () => {
+      await logout();
+      boot(null);
+      // móvil: cierra drawer
+      sidebarEl?.classList.remove("is-open");
+      document.body.classList.add("sidebar-collapsed");
+      localStorage.setItem("sidebarCollapsed", "true");
+      location.hash = "#/login";
+    });
+    footer.appendChild(btn);
   }
 }

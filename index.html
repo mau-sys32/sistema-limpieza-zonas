@@ -20,6 +20,7 @@
 
 <body>
   <div class="app" id="appShell">
+
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand__logo">AG</div>
@@ -59,26 +60,30 @@
           </div>
         </div>
 
-        <!-- 👇 opcional: botones de prueba -->
-        <button class="btn btn--ghost w-full" id="btnLoginDemo">Login demo (Firebase)</button>
-        <button class="btn btn--ghost w-full" id="btnLogoutDemo">Logout</button>
-
         <button class="btn btn--ghost w-full" id="btnToggleTheme">Tema</button>
       </div>
     </aside>
 
     <main class="main">
+
       <header class="topbar">
-        <button class="iconbtn only-mobile" id="btnToggleSidebar" aria-label="Abrir menú">☰</button>
+        <button class="iconbtn" id="btnToggleSidebar" title="Mostrar/Ocultar menú">
+          ☰
+        </button>
 
         <div class="topbar__left">
           <div class="crumbs" id="crumbs">Dashboard</div>
-          <div class="topbar__hint">Sistema de Gestión y Control de Limpieza por Zonas</div>
+          <div class="topbar__hint">
+            Sistema de Gestión y Control de Limpieza por Zonas
+          </div>
         </div>
 
         <div class="topbar__right">
           <div class="pill" id="pillStatus">Desconectado</div>
-          <button class="btn btn--primary" id="btnQuickAdd">+ Nuevo</button>
+
+          <button class="btn btn--primary" id="btnQuickAdd">
+            + Nuevo
+          </button>
         </div>
       </header>
 
@@ -90,6 +95,7 @@
         <span>© Apodaca Group · Limpieza por Zonas</span>
         <span class="muted">v0.1 (front-end)</span>
       </footer>
+
     </main>
   </div>
 
@@ -106,7 +112,6 @@
     </div>
   </div>
 
-  <!-- ✅ IMPORTANTE: usa ruta relativa con ./ para Live Server -->
   <script type="module" src="./assets/js/app.js"></script>
 </body>
 </html>

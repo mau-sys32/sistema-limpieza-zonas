@@ -1,133 +1,298 @@
-import { Store } from "../store.js";
+// assets/js/pages/reportes.js
+import { db } from "../firebase/config.js";
 import { Modal } from "../ui.js";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  updateDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-export const Reportes = {
-  view() {
-    return `
+export const Reportes = { view, mount };
+
+function view() {
+  return `
+    <section class="page">
+      <header class="page__header">
+        <div>
+          <h1>Reportes</h1>
+          <p class="sub">Incidencias enviadas por empleados (Firestore: reports).</p>
+        </div>
+      </header>
+
       <div class="card section">
         <div class="toolbar">
-          <div class="toolbar__left">
-            <div>
-              <h1 class="h1">Rotación diaria</h1>
-              <p class="sub">Asigna automáticamente empleados a zonas para el día de hoy.</p>
+          <div class="toolbar__left" style="gap:10px; align-items:center;">
+            <strong>Incidencias</strong>
+            <span class="badge">reports</span>
+
+            <div style="display:flex; gap:8px; margin-left:10px; flex-wrap:wrap;">
+              <button class="btn btn--ghost" id="rpFilterAll">Todos</button>
+              <button class="btn btn--ghost" id="rpFilterPend">Pendientes</button>
+              <button class="btn btn--ghost" id="rpFilterRes">Resueltos</button>
             </div>
           </div>
 
           <div class="toolbar__right">
-            <button class="btn" id="btnVerRot">Ver rotación</button>
-            <button class="btn btn--primary" id="btnGenRot">Generar rotación de hoy</button>
+            <span class="muted" id="rpCount">—</span>
           </div>
         </div>
 
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Empleado</th>
-              <th>Zona asignada</th>
-            </tr>
-          </thead>
-          <tbody id="rotRows"></tbody>
-        </table>
-
-        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn--primary" id="btnCrearTareasDia">Crear tareas del día (según rotación)</button>
-          <span class="muted" id="rotMeta"></span>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Empleado</th>
+                <th>Zona</th>
+                <th>Descripción</th>
+                <th>Foto</th>
+                <th>Estado</th>
+                <th style="text-align:right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="rpRows">
+              <tr><td colspan="7" class="muted">Cargando…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    `;
-  },
+    </section>
+  `;
+}
 
-  mount() {
-    const rowsEl = document.getElementById("rotRows");
-    const metaEl = document.getElementById("rotMeta");
+function mount() {
+  const tbody = document.getElementById("rpRows");
+  const count = document.getElementById("rpCount");
 
-    const render = () => {
-      const rot = Store.rotacion.getHoy();
+  const btnAll  = document.getElementById("rpFilterAll");
+  const btnPend = document.getElementById("rpFilterPend");
+  const btnRes  = document.getElementById("rpFilterRes");
 
-      if (!rot) {
-        rowsEl.innerHTML = `<tr><td colspan="2" class="muted">No hay rotación generada hoy.</td></tr>`;
-        metaEl.textContent = "Genera la rotación para asignar empleados.";
-        return;
-      }
+  let allRows = [];
+  let filter = "all"; // all | pendiente | resuelto
 
-      rowsEl.innerHTML = rot.asignaciones.map(a => `
-        <tr>
-          <td><strong>${esc(a.empleado)}</strong></td>
-          <td>${esc(a.zona)}</td>
-        </tr>
-      `).join("");
+  const q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
 
-      metaEl.textContent = `Rotación ${rot.dateKey} · ${rot.asignaciones.length} asignación(es).`;
-    };
-
-    document.getElementById("btnGenRot").addEventListener("click", () => {
-      const r = Store.rotacion.generarHoy();
-      if (!r.ok) {
-        Modal.open({
-          title: "No se puede generar rotación",
-          body: `<p class="sub">${esc(r.msg)}</p>`,
-          footer: `<button class="btn" data-close="1">Cerrar</button>`
-        });
-        return;
-      }
-      render();
-    });
-
-    document.getElementById("btnVerRot").addEventListener("click", render);
-
-    document.getElementById("btnCrearTareasDia").addEventListener("click", () => {
-      const rot = Store.rotacion.getHoy();
-      if (!rot) {
-        Modal.open({
-          title: "Sin rotación",
-          body: `<p class="sub">Primero genera la rotación de hoy.</p>`,
-          footer: `<button class="btn" data-close="1">Cerrar</button>`
-        });
-        return;
-      }
-
-      // crea una tarea por asignación
-      const existentes = Store.tareas.list();
-      const hoy = rot.dateKey;
-
-      let creadas = 0;
-
-      for (const a of rot.asignaciones) {
-const dup = existentes.some(t => {
-  const d = (t.fecha || "").slice(0, 10); // YYYY-MM-DD
-  return d === hoy && t.responsableId === a.empleadoId && t.zona === a.zona;
-});
-        if (dup) continue;
-
-        Store.tareas.create({
-          zona: a.zona,
-          prioridad: "Media",
-          responsableId: a.empleadoId,
-          responsableNombre: a.empleado,
-          fecha: `${hoy}T08:00:00.000Z`
-        });
-
-        creadas++;
-      }
-
-      Modal.open({
-        title: "Tareas del día",
-        body: `<p class="sub">Se crearon <strong>${creadas}</strong> tarea(s) según la rotación de hoy.</p>`,
-        footer: `<button class="btn btn--primary" data-close="1">Listo</button>`
-      });
-
-      render();
-    });
-
+  window.__unsubReports && window.__unsubReports();
+  window.__unsubReports = onSnapshot(q, (snap) => {
+    allRows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
-  }
-};
+  });
 
-function esc(v) {
-  return String(v ?? "")
+  btnAll?.addEventListener("click", () => { filter = "all"; setFilterUI(); render(); });
+  btnPend?.addEventListener("click", () => { filter = "pendiente"; setFilterUI(); render(); });
+  btnRes?.addEventListener("click", () => { filter = "resuelto"; setFilterUI(); render(); });
+
+  function setFilterUI() {
+    const setActive = (el, on) => el && el.classList.toggle("is-active", !!on);
+    setActive(btnAll, filter === "all");
+    setActive(btnPend, filter === "pendiente");
+    setActive(btnRes, filter === "resuelto");
+  }
+  setFilterUI();
+
+  function render() {
+    if (!tbody) return;
+
+    const rows = allRows.filter(r => {
+      const st = String(r.status || "pendiente").toLowerCase();
+      if (filter === "pendiente") return st !== "resuelto";
+      if (filter === "resuelto") return st === "resuelto";
+      return true;
+    });
+
+    if (count) count.textContent = `${rows.length} reporte(s)`;
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">Sin reportes.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const fecha = fmtDate(r.createdAt);
+      const estado = String(r.status || "pendiente").toLowerCase();
+
+      const badge = estado === "resuelto"
+        ? `<span class="badge badge--good">Resuelto</span>
+           <div class="muted" style="font-size:12px;margin-top:4px;">
+             ${r.resolvedAt ? "Resuelto: " + fmtDate(r.resolvedAt) : ""}
+           </div>`
+        : `<span class="badge">Pendiente</span>`;
+
+      const foto = r.photoURL
+        ? `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <a href="${r.photoURL}" target="_blank" rel="noopener" title="Abrir foto">
+              <img src="${r.photoURL}" alt="foto" style="height:46px;width:72px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.10);">
+            </a>
+            <a class="btn btn--ghost" href="${r.photoURL}" target="_blank" rel="noopener">Abrir</a>
+          </div>
+        `
+        : `<span class="muted">—</span>`;
+
+      const btnResolve = estado === "resuelto"
+        ? `<button class="btn btn--ghost" disabled>Resuelto</button>`
+        : `<button class="btn btn--primary" data-act="resolve" data-id="${r.id}">Marcar resuelto</button>`;
+
+      const btnDetail = `<button class="btn btn--ghost" data-act="detail" data-id="${r.id}">Ver detalle</button>`;
+
+      return `
+        <tr>
+          <td>${fecha}</td>
+          <td><strong>${esc(r.employeeNombre || "—")}</strong></td>
+          <td>${esc(r.zoneNombre || "—")}</td>
+          <td>${clip(esc(r.observaciones || ""), 80)}</td>
+          <td>${foto}</td>
+          <td>${badge}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            ${btnDetail}
+            ${btnResolve}
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  tbody?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+
+    const act = btn.dataset.act;
+    const id = btn.dataset.id;
+
+    const r = allRows.find(x => String(x.id) === String(id));
+    if (!r) return;
+
+    if (act === "detail") {
+      openDetail(r);
+      return;
+    }
+
+    if (act === "resolve") {
+      const ok = confirm("¿Marcar este reporte como resuelto?");
+      if (!ok) return;
+
+      try {
+        await updateDoc(doc(db, "reports", id), {
+          status: "resuelto",
+          resolvedAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error: " + (err?.message || err));
+      }
+    }
+  });
+
+  function openDetail(r) {
+    const estado = String(r.status || "pendiente").toLowerCase();
+
+    Modal.open({
+      title: "Detalle del reporte",
+      body: `
+        <div class="kgrid" style="gap:12px;">
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Empleado</label>
+              <div class="input" style="display:flex;align-items:center;">${esc(r.employeeNombre || "—")}</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Zona</label>
+              <div class="input" style="display:flex;align-items:center;">${esc(r.zoneNombre || "—")}</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Fecha</label>
+              <div class="input" style="display:flex;align-items:center;">${fmtDate(r.createdAt)}</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Estado</label>
+              <div class="input" style="display:flex;align-items:center;">
+                ${estado === "resuelto" ? "Resuelto" : "Pendiente"}
+                ${r.resolvedAt ? `<span class="muted" style="margin-left:10px;">(${fmtDate(r.resolvedAt)})</span>` : ""}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Descripción</label>
+              <textarea class="input" rows="5" readonly>${(r.observaciones || "")}</textarea>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="field">
+              <label class="muted">Foto</label>
+              ${
+                r.photoURL
+                  ? `<a href="${r.photoURL}" target="_blank" rel="noopener">
+                       <img src="${r.photoURL}" style="width:100%;max-height:320px;object-fit:contain;border-radius:14px;border:1px solid rgba(255,255,255,.10);">
+                     </a>`
+                  : `<div class="muted">Sin foto.</div>`
+              }
+            </div>
+          </div>
+        </div>
+      `,
+      foot: `
+        <button class="btn" data-close="1">Cerrar</button>
+        ${
+          estado !== "resuelto"
+            ? `<button class="btn btn--primary" id="rpResolveNow">Marcar resuelto</button>`
+            : ""
+        }
+      `
+    });
+
+    document.getElementById("rpResolveNow")?.addEventListener("click", async () => {
+      const ok = confirm("¿Marcar este reporte como resuelto?");
+      if (!ok) return;
+      try {
+        await updateDoc(doc(db, "reports", r.id), {
+          status: "resuelto",
+          resolvedAt: new Date().toISOString()
+        });
+        Modal.close();
+      } catch (err) {
+        console.error(err);
+        alert("Error: " + (err?.message || err));
+      }
+    });
+  }
+}
+
+/* ===== helpers ===== */
+
+function fmtDate(v) {
+  if (!v) return "—";
+  if (typeof v?.toDate === "function") return v.toDate().toLocaleString();
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}
+
+function esc(s) {
+  return String(s ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .replaceAll("'", "&#039;");
+}
+
+function clip(s, n = 90) {
+  const t = String(s || "");
+  if (t.length <= n) return t;
+  return t.slice(0, n - 1) + "…";
 }

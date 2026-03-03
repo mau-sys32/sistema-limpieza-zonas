@@ -3,42 +3,50 @@ import { login, logout, watchAuth, getMyProfile } from "../firebase/auth.js";
 export const Login = {
   view() {
     return `
-      <div class="card section" style="max-width:720px;">
-        <h1 class="h1">Inicio de sesión</h1>
-        <p class="sub">Acceso con Firebase Authentication (correo y contraseña).</p>
-
-        <div class="kgrid" style="margin-top:12px;">
-          <div class="col-12">
-            <div class="field">
-              <label class="muted">Correo</label>
-              <input class="input" id="lgEmail" placeholder="correo@empresa.com" />
-            </div>
-          </div>
-
-          <div class="col-12">
-            <div class="field">
-              <label class="muted">Contraseña</label>
-              <input class="input" id="lgPass" type="password" placeholder="••••••••" />
-            </div>
-          </div>
-
-          <div class="col-12" style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
-            <button class="btn" id="lgLogout">Cerrar sesión</button>
-            <button class="btn btn--primary" id="lgLogin">Entrar</button>
+      <div class="card section login-card">
+        <div class="login-head">
+          <div class="login-logo">AG</div>
+          <div>
+            <h1 class="login-title">Inicio de sesión</h1>
+            <p class="login-sub">Sistema de Gestión y Control de Limpieza por Zonas</p>
           </div>
         </div>
 
-        <p class="sub" id="lgMsg" style="margin-top:10px;"></p>
+        <div class="login-form">
+          <div>
+            <label class="login-label" for="lgEmail">Correo</label>
+            <input class="input login-input" id="lgEmail" autocomplete="username" placeholder="correo@empresa.com" />
+          </div>
+
+          <div>
+            <label class="login-label" for="lgPass">Contraseña</label>
+            <input class="input login-input" id="lgPass" type="password" autocomplete="current-password" placeholder="••••••••" />
+          </div>
+
+          <div class="login-actions">
+            <button class="btn btn-quiet" id="lgLogout" type="button">Cerrar sesión</button>
+            <button class="btn btn--primary" id="lgLogin" type="button">Entrar</button>
+          </div>
+        </div>
+
+        <p class="login-msg" id="lgMsg"></p>
+
+        <div class="login-mini">
+          <span>© Apodaca Group</span>
+          <span>v0.1</span>
+        </div>
       </div>
     `;
   },
 
   mount() {
     const msg = document.getElementById("lgMsg");
+    const emailEl = document.getElementById("lgEmail");
+    const passEl = document.getElementById("lgPass");
 
-    document.getElementById("lgLogin")?.addEventListener("click", async () => {
-      const email = document.getElementById("lgEmail")?.value?.trim();
-      const pass = document.getElementById("lgPass")?.value;
+    const doLogin = async () => {
+      const email = emailEl?.value?.trim();
+      const pass = passEl?.value;
 
       msg.textContent = "Iniciando sesión…";
 
@@ -47,7 +55,13 @@ export const Login = {
       } catch (e) {
         msg.textContent = "Error: " + (e?.message || e);
       }
-    });
+    };
+
+    document.getElementById("lgLogin")?.addEventListener("click", doLogin);
+
+    // ✅ Enter para iniciar sesión
+    emailEl?.addEventListener("keydown", (ev) => ev.key === "Enter" && doLogin());
+    passEl?.addEventListener("keydown", (ev) => ev.key === "Enter" && doLogin());
 
     document.getElementById("lgLogout")?.addEventListener("click", async () => {
       msg.textContent = "Cerrando sesión…";
@@ -58,32 +72,30 @@ export const Login = {
       }
     });
 
-watchAuth(async (user) => {
-  if (!user) {
-    msg.textContent = "Sin sesión.";
-    return;
-  }
+    watchAuth(async (user) => {
+      if (!user) {
+        msg.textContent = "Sin sesión.";
+        return;
+      }
 
-  msg.textContent = "Leyendo perfil…";
+      msg.textContent = "Leyendo perfil…";
 
-  try {
-    const profile = await getMyProfile(user.uid);
+      try {
+        const profile = await getMyProfile(user.uid);
 
-    if (!profile) {
-      msg.textContent =
-        " Sesión Auth OK, pero falta crear tu perfil en Firestore: users/{UID}. " +
-        "Ve a Firebase Console → Firestore → users → crea doc con ID=UID y rol=admin.";
-      return;
-    }
+        if (!profile) {
+          msg.textContent =
+            "Sesión Auth OK, pero falta crear tu perfil en Firestore: users/{UID}. " +
+            "Firebase Console → Firestore → users → crea doc con ID=UID y rol=admin.";
+          return;
+        }
 
-    msg.textContent = `Conectado: ${profile.nombre} · rol: ${profile.rol}`;
-    location.hash = "#/dashboard";
-    location.reload();
-
-  } catch (e) {
-    msg.textContent = `Error: ${e?.code || ""} ${e?.message || e}`;
-  }
-});
-
+        msg.textContent = `Conectado: ${profile.nombre} · rol: ${profile.rol}`;
+        location.hash = "#/dashboard";
+        location.reload();
+      } catch (e) {
+        msg.textContent = `Error: ${e?.code || ""} ${e?.message || e}`;
+      }
+    });
   }
 };

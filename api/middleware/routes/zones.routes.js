@@ -7,6 +7,9 @@ import { requireRole } from "../roles.middleware.js";
 const router = Router();
 const col = db.collection("zones");
 
+// ✅ auth para todo
+router.use(requireAuth);
+
 function pickZone(body = {}) {
   return {
     nombre: String(body.nombre || "").trim(),
@@ -24,19 +27,24 @@ function validateZone(z) {
   return null;
 }
 
-// GET /api/zonas  (cualquier usuario logueado)
-router.get("/", requireAuth, async (req, res) => {
+// GET /api/zonas (todos logueados)
+router.get("/", async (req, res) => {
   try {
-    const snap = await col.orderBy("createdAt", "desc").get();
+    // ⚠️ si te da error de índice por orderBy, quítalo y ordena en memoria
+    const snap = await col.get();
     const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // orden en memoria por nombre (o lo que quieras)
+    data.sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || "")));
+
     res.json({ ok: true, data });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message || "error" });
   }
 });
 
-// POST /api/zonas  (solo admin/supervisor)
-router.post("/", requireAuth, requireRole("admin", "supervisor"), async (req, res) => {
+// POST /api/zonas (solo admin/supervisor)
+router.post("/", requireRole("admin", "supervisor"), async (req, res) => {
   try {
     const z = pickZone(req.body);
     const err = validateZone(z);
@@ -55,8 +63,8 @@ router.post("/", requireAuth, requireRole("admin", "supervisor"), async (req, re
   }
 });
 
-// PATCH /api/zonas/:id  (solo admin/supervisor)
-router.patch("/:id", requireAuth, requireRole("admin", "supervisor"), async (req, res) => {
+// PATCH /api/zonas/:id (solo admin/supervisor)
+router.patch("/:id", requireRole("admin", "supervisor"), async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);
@@ -82,8 +90,8 @@ router.patch("/:id", requireAuth, requireRole("admin", "supervisor"), async (req
   }
 });
 
-// DELETE /api/zonas/:id  (solo admin/supervisor)
-router.delete("/:id", requireAuth, requireRole("admin", "supervisor"), async (req, res) => {
+// DELETE /api/zonas/:id (solo admin/supervisor)
+router.delete("/:id", requireRole("admin", "supervisor"), async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);

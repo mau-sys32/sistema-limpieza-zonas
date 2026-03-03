@@ -25,6 +25,9 @@ export function initRouter() {
   async function render() {
     const route = getRoute();
 
+    // ✅ Modo Login: centra y oculta sidebar/topbar/footer
+    document.body.classList.toggle("is-login", route === "login");
+
     const Views = window.Views || {};
     const Mounts = window.ViewMount || {};
 
