@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "143853235640",
+    "firebase_url": "https://systm-limpieza-default-rtdb.firebaseio.com",
+    "project_id": "systm-limpieza",
+    "storage_bucket": "systm-limpieza.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:143853235640:android:3999b3b602358bc441334d",
+        "android_client_info": {
+          "package_name": "com.example.limpieza_app_movil"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "143853235640-54u9rlnafeui7ov20uv6g5q4d64pri27.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxHyViFH2tklDhuwzH_gg9iGnvPL5vy60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "143853235640-54u9rlnafeui7ov20uv6g5q4d64pri27.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
