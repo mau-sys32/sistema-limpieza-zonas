@@ -14,7 +14,7 @@ function view() {
     <header class="page__header">
       <div>
         <h1>Historial</h1>
-        <p class="sub">Consulta de registros por rango (semana, quincena, mes).</p>
+        <p class="sub">Consulta de registros (semana, quincena, mes).</p>
       </div>
 
       <div class="page__actions">

@@ -26,7 +26,7 @@ function view() {
     <header class="page__header">
       <div>
         <h1>Tareas</h1>
-        <p class="sub">Asignación y control de tareas (API REST: tareas + History en Firestore).</p>
+        <p class="sub">Asignación y control de tareas.</p>
       </div>
 
       <div class="page__actions">

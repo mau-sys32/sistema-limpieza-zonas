@@ -16,7 +16,7 @@ function view() {
     <header class="page__header">
       <div>
         <h1>Dashboard</h1>
-        <p class="sub">Resumen general del sistema (Firestore en tiempo real).</p>
+        <p class="sub">Resumen general del sistema.</p>
       </div>
     </header>
 

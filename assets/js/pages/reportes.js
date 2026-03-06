@@ -18,7 +18,7 @@ function view() {
       <header class="page__header">
         <div>
           <h1>Reportes</h1>
-          <p class="sub">Incidencias enviadas por empleados (Firestore: reports).</p>
+          <p class="sub">Incidencias enviadas por empleados.</p>
         </div>
       </header>
 

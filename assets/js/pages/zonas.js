@@ -11,7 +11,7 @@ export const Zonas = {
           <div class="toolbar__left">
             <div>
               <h1 class="h1">Zonas</h1>
-              <p class="sub">Alta, edición y listado de zonas (API REST + estado derivado por tareas).</p>
+              <p class="sub">Alta, edición y listado de zonas.</p>
             </div>
           </div>
 

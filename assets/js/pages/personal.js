@@ -17,7 +17,7 @@ function view() {
         <div class="toolbar__left">
           <div>
             <h1 class="h1">Personal</h1>
-            <p class="sub">Alta y listado de empleados (API REST: /api/personal).</p>
+            <p class="sub">Alta y listado de empleados.</p>
           </div>
         </div>
 
