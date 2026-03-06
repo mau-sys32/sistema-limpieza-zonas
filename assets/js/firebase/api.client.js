@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
 const API_BASE = "https://sistema-limpieza-api.onrender.com";
 
 let _authReady = null;
+
 function waitAuthReady() {
   if (_authReady) return _authReady;
   _authReady = new Promise((resolve) => {
@@ -49,6 +50,7 @@ async function request(path, { method = "GET", body } = {}) {
       data && typeof data === "object" && data.error
         ? data.error
         : `HTTP ${res.status}`;
+
     throw new Error(msg);
   }
 
