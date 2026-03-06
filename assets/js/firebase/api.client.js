@@ -4,7 +4,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
 
 const API_BASE = "https://sistema-limpieza-api.onrender.com";
 
-
 let _authReady = null;
 function waitAuthReady() {
   if (_authReady) return _authReady;
@@ -30,7 +29,7 @@ async function authHeaders() {
 }
 
 async function request(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: await authHeaders(),
     body: body ? JSON.stringify(body) : undefined,
@@ -38,10 +37,18 @@ async function request(path, { method = "GET", body } = {}) {
 
   const text = await res.text();
   let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
 
   if (!res.ok) {
-    const msg = (data && typeof data === "object" && data.error) ? data.error : `HTTP ${res.status}`;
+    const msg =
+      data && typeof data === "object" && data.error
+        ? data.error
+        : `HTTP ${res.status}`;
     throw new Error(msg);
   }
 
@@ -55,5 +62,4 @@ export const Api = {
   del: (path) => request(path, { method: "DELETE" }),
 };
 
-// para debug en consola
 window.Api = Api;
