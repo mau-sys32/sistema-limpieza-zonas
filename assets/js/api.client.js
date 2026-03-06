@@ -2,7 +2,7 @@
 import { auth } from "./firebase/config.js";
 
 // 👉 API backend Express
-const BASE_URL = "http://localhost:4000";
+const API_BASE = "https://sistema-limpieza-api.onrender.com";
 
 /* =========================
    HEADERS CON TOKEN FIREBASE

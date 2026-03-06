@@ -73,4 +73,6 @@ app.get("/api/debug/auth-header", (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`API corriendo en http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 API corriendo en puerto ${PORT}`);
+});

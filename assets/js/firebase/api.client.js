@@ -2,7 +2,7 @@
 import { auth } from "./firebase/config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const BASE_URL = "http://localhost:4000";
+const API_BASE = "https://sistema-limpieza-api.onrender.com";
 
 
 let _authReady = null;
