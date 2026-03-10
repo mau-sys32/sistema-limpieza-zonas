@@ -114,7 +114,7 @@ body.is-login .login-label{
 }
 
 body.is-login .login-input{
-  width: 100% !important;
+  width: 100%;
   height: 46px;
   border-radius: 14px;
   background: rgba(255,255,255,.05);
@@ -161,12 +161,65 @@ body.is-login .login-mini{
 }
 
 /* =========================
-   DASHBOARD / PAGES
+   PAGES / TABLES
 ========================= */
-.table-wrap{
-  max-height: 420px;
+.page,
+.section,
+.card,
+.main,
+.content{
+  min-width: 0;
 }
 
+.card{
+  overflow: hidden;
+}
+
+.table-wrap{
+  width: 100%;
+  max-width: 100%;
+  max-height: 420px;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.35) rgba(255,255,255,.06);
+  border-radius: 14px;
+  position: relative;
+}
+
+.table-wrap::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track{
+  background: rgba(255,255,255,.05);
+  border-radius: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.35);
+  border-radius: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,.50);
+}
+
+.table{
+  width: 100%;
+  min-width: 720px;
+}
+
+.table{
+  width: 100%;
+  min-width: 720px;
+}
+
+/* =========================
+   KPI / PAGE FIXES
+========================= */
 @media (max-width: 640px){
   .kpi__value{
     font-size: 30px;
@@ -177,6 +230,9 @@ body.is-login .login-mini{
   }
 }
 
+/* =========================
+   LOGIN MOBILE
+========================= */
 @media (max-width: 520px){
   body.is-login .content{
     padding: 24px 12px;
@@ -203,5 +259,23 @@ body.is-login .login-mini{
   body.is-login .login-mini{
     flex-direction: column;
     gap: 6px;
+  }
+}
+
+/* =========================
+   ZONAS MOBILE FIX
+========================= */
+@media (max-width: 768px){
+  .section{
+    padding: 12px;
+  }
+
+  .card{
+    border-radius: 18px;
+  }
+
+  .table-wrap{
+    margin: 0;
+    padding-bottom: 4px;
   }
 }

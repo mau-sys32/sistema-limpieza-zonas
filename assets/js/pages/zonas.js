@@ -1,6 +1,11 @@
 // assets/js/pages/zonas.js
 import { Modal } from "../ui.js";
-import { zonesList, zonesCreate, zonesUpdate, zonesDelete } from "../firebase/zones.db.js";
+import {
+  zonesList,
+  zonesCreate,
+  zonesUpdate,
+  zonesDelete,
+} from "../firebase/zones.db.js";
 import { tasksList } from "../firebase/tasks.db.js";
 
 export const Zonas = {
@@ -21,19 +26,21 @@ export const Zonas = {
           </div>
         </div>
 
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Zona</th>
-              <th>Área</th>
-              <th>Frecuencia</th>
-              <th>Prioridad</th>
-              <th>Estado</th>
-              <th style="text-align:right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="zonasRows"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Zona</th>
+                <th>Área</th>
+                <th>Frecuencia</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th style="text-align:right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="zonasRows"></tbody>
+          </table>
+        </div>
 
         <p class="sub" id="zonasMeta" style="margin-top:10px;"></p>
       </div>
@@ -59,46 +66,56 @@ export const Zonas = {
 
     const computeZoneEstado = (zoneId) => {
       const zid = String(zoneId || "");
-      const list = tasks.filter(t => String(t.zoneId || "") === zid);
+      const list = tasks.filter((t) => String(t.zoneId || "") === zid);
       if (!list.length) return null;
 
-      const estados = list.map(t => normalizeTaskEstado(t.estado));
+      const estados = list.map((t) => normalizeTaskEstado(t.estado));
       if (estados.includes("En proceso")) return "En proceso";
       if (estados.includes("Pendiente")) return "Pendiente";
       return "Finalizada";
     };
 
     const badgeEstado = (s) => {
-      if (s === "Finalizada") return `<span class="badge badge--good">Finalizada</span>`;
-      if (s === "En proceso") return `<span class="badge badge--warn">En proceso</span>`;
+      if (s === "Finalizada") {
+        return `<span class="badge badge--good">Finalizada</span>`;
+      }
+      if (s === "En proceso") {
+        return `<span class="badge badge--warn">En proceso</span>`;
+      }
       return `<span class="badge badge--bad">Pendiente</span>`;
     };
 
     const render = () => {
       const q = (searchEl?.value || "").toLowerCase().trim();
 
-      const data = cache.filter(z =>
+      const data = cache.filter((z) =>
         ((z.nombre || "") + " " + (z.area || "")).toLowerCase().includes(q)
       );
 
-      rowsEl.innerHTML = data.length ? data.map(z => {
-        const derived = zoneState.get(String(z.id)) || null;
-        const estadoShow = derived || (z.estado || "Pendiente");
+      rowsEl.innerHTML = data.length
+        ? data
+            .map((z) => {
+              const derived = zoneState.get(String(z.id)) || null;
+              const estadoShow = derived || (z.estado || "Pendiente");
 
-        return `
-          <tr>
-            <td><strong>${esc(z.nombre)}</strong></td>
-            <td>${esc(z.area)}</td>
-            <td>${esc(z.frecuencia)}</td>
-            <td>${esc(z.prioridad)}</td>
-            <td>${badgeEstado(estadoShow)}</td>
-            <td style="text-align:right; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-              <button class="btn" data-edit="${z.id}">Editar</button>
-              <button class="btn" data-del="${z.id}">Eliminar</button>
-            </td>
-          </tr>
-        `;
-      }).join("") : `<tr><td colspan="6" class="muted">Sin zonas aún.</td></tr>`;
+              return `
+                <tr>
+                  <td><strong>${esc(z.nombre)}</strong></td>
+                  <td>${esc(z.area)}</td>
+                  <td>${esc(z.frecuencia)}</td>
+                  <td>${esc(z.prioridad)}</td>
+                  <td>${badgeEstado(estadoShow)}</td>
+                  <td style="text-align:right;">
+                    <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                      <button class="btn" data-edit="${z.id}">Editar</button>
+                      <button class="btn" data-del="${z.id}">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            })
+            .join("")
+        : `<tr><td colspan="6" class="muted">Sin zonas aún.</td></tr>`;
 
       metaEl.textContent = `Mostrando ${data.length} zona(s).`;
     };
@@ -125,22 +142,26 @@ export const Zonas = {
         footer: `
           <button class="btn" data-close="1">Cancelar</button>
           <button class="btn btn--primary" id="mzSave">Guardar</button>
-        `
+        `,
       });
 
-      document.getElementById("mzSave")?.addEventListener("click", async () => {
-        const zona = readForm();
-        if (!zona.nombre) return shake("mzNombre");
+      document.getElementById("mzSave")?.addEventListener(
+        "click",
+        async () => {
+          const zona = readForm();
+          if (!zona.nombre) return shake("mzNombre");
 
-        await zonesCreate(zona);
-        Modal.close();
-        await refresh();
-      }, { once: true });
+          await zonesCreate(zona);
+          Modal.close();
+          await refresh();
+        },
+        { once: true }
+      );
     }
 
     function openEdit(id) {
       const zid = String(id);
-      const z = cache.find(x => String(x.id) === zid);
+      const z = cache.find((x) => String(x.id) === zid);
       if (!z) return;
 
       Modal.open({
@@ -149,17 +170,21 @@ export const Zonas = {
         footer: `
           <button class="btn" data-close="1">Cerrar</button>
           <button class="btn btn--primary" id="ezSave">Guardar cambios</button>
-        `
+        `,
       });
 
-      document.getElementById("ezSave")?.addEventListener("click", async () => {
-        const patch = readForm();
-        if (!patch.nombre) return shake("mzNombre");
+      document.getElementById("ezSave")?.addEventListener(
+        "click",
+        async () => {
+          const patch = readForm();
+          if (!patch.nombre) return shake("mzNombre");
 
-        await zonesUpdate(zid, patch);
-        Modal.close();
-        await refresh();
-      }, { once: true });
+          await zonesUpdate(zid, patch);
+          Modal.close();
+          await refresh();
+        },
+        { once: true }
+      );
     }
 
     function openDelete(id) {
@@ -171,14 +196,18 @@ export const Zonas = {
         footer: `
           <button class="btn" data-close="1">Cancelar</button>
           <button class="btn btn--primary" id="btnConfirmDel">Eliminar</button>
-        `
+        `,
       });
 
-      document.getElementById("btnConfirmDel")?.addEventListener("click", async () => {
-        await zonesDelete(zid);
-        Modal.close();
-        await refresh();
-      }, { once: true });
+      document.getElementById("btnConfirmDel")?.addEventListener(
+        "click",
+        async () => {
+          await zonesDelete(zid);
+          Modal.close();
+          await refresh();
+        },
+        { once: true }
+      );
     }
 
     document.getElementById("btnAddZona")?.addEventListener("click", openCreate);
@@ -187,12 +216,13 @@ export const Zonas = {
     rowsEl.addEventListener("click", (e) => {
       const edit = e.target.closest("button[data-edit]")?.dataset?.edit;
       const del = e.target.closest("button[data-del]")?.dataset?.del;
+
       if (edit) openEdit(edit);
       if (del) openDelete(del);
     });
 
     await refresh();
-  }
+  },
 };
 
 function formHTML(z = {}) {
@@ -226,7 +256,9 @@ function formHTML(z = {}) {
         <div class="field">
           <label class="muted">Prioridad</label>
           <select class="select" id="mzPrio">
-            ${["Alta","Media","Baja"].map(p => `<option ${p===prio?"selected":""}>${p}</option>`).join("")}
+            ${["Alta", "Media", "Baja"]
+              .map((p) => `<option ${p === prio ? "selected" : ""}>${p}</option>`)
+              .join("")}
           </select>
         </div>
       </div>
@@ -235,7 +267,9 @@ function formHTML(z = {}) {
         <div class="field">
           <label class="muted">Estado</label>
           <select class="select" id="mzEstado">
-            ${["Pendiente","En proceso","Finalizada"].map(s => `<option ${s===estado?"selected":""}>${s}</option>`).join("")}
+            ${["Pendiente", "En proceso", "Finalizada"]
+              .map((s) => `<option ${s === estado ? "selected" : ""}>${s}</option>`)
+              .join("")}
           </select>
         </div>
       </div>
@@ -256,9 +290,13 @@ function readForm() {
 function shake(id) {
   const el = document.getElementById(id);
   if (!el) return;
+
   el.style.borderColor = "rgba(239,68,68,.6)";
   el.focus();
-  setTimeout(() => (el.style.borderColor = ""), 900);
+
+  setTimeout(() => {
+    el.style.borderColor = "";
+  }, 900);
 }
 
 function esc(v) {

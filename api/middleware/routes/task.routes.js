@@ -1,4 +1,3 @@
-// api/middleware/routes/task.routes.js
 import { Router } from "express";
 import admin from "firebase-admin";
 import { db, FieldValue } from "../../firebaseAdmin.js";
@@ -6,8 +5,9 @@ import { db, FieldValue } from "../../firebaseAdmin.js";
 const router = Router();
 
 const col = db.collection("tasks");
-const usersCol = db.collection("users"); // ✅ ANTES de usarlo
+const usersCol = db.collection("users");
 const reportsCol = db.collection("reports");
+const notificationsCol = db.collection("notifications");
 
 /* =========================
    AUTH + ROLE
@@ -30,7 +30,7 @@ async function attachRole(req, res, next) {
   try {
     const snap = await usersCol.doc(req.uid).get();
     req.role = snap.exists
-      ? String(snap.data()?.rol || "empleado").toLowerCase()
+      ? String(snap.data()?.rol || snap.data()?.role || "empleado").toLowerCase()
       : "empleado";
     next();
   } catch (e) {
@@ -62,7 +62,7 @@ function ensureOwnTaskOrManager(task, req) {
   return employeeId && employeeId === req.uid;
 }
 
-// ✅ TODAS las rutas requieren auth + role (UNA sola vez)
+// Todas las rutas requieren auth + role
 router.use(requireAuth, attachRole);
 
 /* =========================
@@ -82,8 +82,8 @@ function normalizeEstado(s) {
 
 function pickTask(body = {}) {
   return {
-    fecha: String(body.fecha || "").trim(), // yyyy-mm-dd
-    employeeId: String(body.employeeId || "").trim(), // UID Firebase del empleado
+    fecha: String(body.fecha || "").trim(),
+    employeeId: String(body.employeeId || "").trim(),
     employeeNombre: String(body.employeeNombre || "").trim(),
     employeeCorreo: String(body.employeeCorreo || "").trim(),
     zoneId: String(body.zoneId || "").trim(),
@@ -104,10 +104,107 @@ function validateTask(t) {
   return null;
 }
 
+async function createInternalNotification({
+  employeeId,
+  title,
+  body,
+  route = "/tareas",
+  type = "task_assigned",
+  taskId = null,
+  extra = {},
+}) {
+  if (!employeeId) return null;
+
+  const docRef = await notificationsCol.add({
+    audienceTags: [`user:${employeeId}`, "role:empleado"],
+    title,
+    body,
+    type,
+    route,
+    taskId,
+    readBy: [],
+    createdAt: FieldValue.serverTimestamp(),
+    ...extra,
+  });
+
+  return docRef.id;
+}
+
+async function sendPushToUser({
+  employeeId,
+  title,
+  body,
+  route = "/tareas",
+  taskId = "",
+  extraData = {},
+}) {
+  try {
+    console.log("[FCM] employeeId recibido:", employeeId);
+
+    if (!employeeId) {
+      console.log("[FCM] employeeId vacío");
+      return { sent: false, reason: "employeeId vacío" };
+    }
+
+    const userSnap = await usersCol.doc(employeeId).get();
+
+    if (!userSnap.exists) {
+      console.log("[FCM] usuario no encontrado:", employeeId);
+      return { sent: false, reason: "usuario no encontrado" };
+    }
+
+    const userData = userSnap.data() || {};
+    const token = String(userData.fcmToken || "").trim();
+
+    console.log("[FCM] userData:", {
+      id: employeeId,
+      nombre: userData.nombre,
+      rol: userData.rol || userData.role,
+      hasToken: !!token,
+    });
+
+    if (!token) {
+      console.log("[FCM] usuario sin token");
+      return { sent: false, reason: "usuario sin fcmToken" };
+    }
+
+    const message = {
+      token,
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        route: String(route),
+        taskId: String(taskId || ""),
+        type: "task_assigned",
+        title: String(title),
+        body: String(body),
+        ...Object.fromEntries(
+          Object.entries(extraData).map(([k, v]) => [k, String(v ?? "")])
+        ),
+      },
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "cleaning_app_high",
+        },
+      },
+    };
+
+    console.log("[FCM] enviando mensaje...");
+    const result = await admin.messaging().send(message);
+    console.log("[FCM] enviado ok:", result);
+
+    return { sent: true, result };
+  } catch (error) {
+    console.error("[FCM] ERROR REAL:", error);
+    return { sent: false, reason: error.message || "error enviando push" };
+  }
+}
+
 /* =========================
    GET /api/tareas
-   - manager: ve todas (con filtros)
-   - empleado: SIEMPRE ve solo sus tareas (se fuerza employeeId = uid)
 ========================= */
 router.get("/", async (req, res) => {
   try {
@@ -118,7 +215,6 @@ router.get("/", async (req, res) => {
 
     let q = col;
 
-    // empleado: forzamos sus tareas
     if (!isManager) {
       q = q.where("employeeId", "==", req.uid);
     } else {
@@ -131,11 +227,10 @@ router.get("/", async (req, res) => {
     const snap = await q.get();
     const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // ✅ orden en memoria (fecha desc; si empata, por id)
     data.sort((a, b) => {
       const fa = String(a.fecha || "");
       const fb = String(b.fecha || "");
-      if (fa != fb) return fb.localeCompare(fa);
+      if (fa !== fb) return fb.localeCompare(fa);
       return String(b.id).localeCompare(String(a.id));
     });
 
@@ -147,8 +242,6 @@ router.get("/", async (req, res) => {
 
 /* =========================
    GET /api/tareas/mias
-   - empleado: sus tareas
-   - manager: también puede usarlo (devuelve vacío o sus tareas si fuera empleado)
 ========================= */
 router.get("/mias", async (req, res) => {
   try {
@@ -158,7 +251,7 @@ router.get("/mias", async (req, res) => {
     data.sort((a, b) => {
       const fa = String(a.fecha || "");
       const fb = String(b.fecha || "");
-      if (fa != fb) return fb.localeCompare(fa);
+      if (fa !== fb) return fb.localeCompare(fa);
       return String(b.id).localeCompare(String(a.id));
     });
 
@@ -170,7 +263,7 @@ router.get("/mias", async (req, res) => {
 
 /* =========================
    POST /api/tareas
-   ✅ SOLO admin/supervisor
+   SOLO admin/supervisor
 ========================= */
 router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
   try {
@@ -184,23 +277,75 @@ router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    const taskId = docRef.id;
+
+    const notifTitle = "Nueva tarea asignada";
+    const notifBody = t.zoneNombre
+      ? `Se te asignó una tarea en la zona ${t.zoneNombre}.`
+      : "Se te asignó una nueva tarea.";
+
+    // 1) Crear notificación interna para el diálogo e historial
+    const notificationId = await createInternalNotification({
+      employeeId: t.employeeId,
+      title: notifTitle,
+      body: notifBody,
+      route: "/tareas",
+      type: "task_assigned",
+      taskId,
+      extra: {
+        zoneId: t.zoneId,
+        zoneNombre: t.zoneNombre,
+        prioridad: t.prioridad,
+      },
+    });
+
+    // 2) Enviar push real al celular
+    const pushResult = await sendPushToUser({
+      employeeId: t.employeeId,
+      title: notifTitle,
+      body: notifBody,
+      route: "/tareas",
+      taskId,
+      extraData: {
+        zoneId: t.zoneId,
+        zoneNombre: t.zoneNombre,
+        prioridad: t.prioridad,
+      },
+    });
+
     const createdSnap = await docRef.get();
-    res.status(201).json({ ok: true, data: { id: docRef.id, ...createdSnap.data() } });
+
+    res.status(201).json({
+      ok: true,
+      data: {
+        id: taskId,
+        ...createdSnap.data(),
+      },
+      notification: {
+        created: Boolean(notificationId),
+        id: notificationId || null,
+      },
+      push: pushResult,
+    });
   } catch (e) {
+    console.error("[TASKS][POST] Error:", e);
     res.status(500).json({ ok: false, error: e.message || "error" });
   }
 });
 
 /* =========================
    PATCH /api/tareas/:id
-   ✅ SOLO admin/supervisor
+   SOLO admin/supervisor
 ========================= */
 router.patch("/:id", requireRole(["admin", "supervisor"]), async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);
     const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+    }
 
     const current = snap.data();
     const merged = { ...current, ...req.body };
@@ -223,14 +368,17 @@ router.patch("/:id", requireRole(["admin", "supervisor"]), async (req, res) => {
 
 /* =========================
    DELETE /api/tareas/:id
-   ✅ SOLO admin/supervisor
+   SOLO admin/supervisor
 ========================= */
 router.delete("/:id", requireRole(["admin", "supervisor"]), async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);
     const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+    }
 
     await ref.delete();
     res.status(200).json({ ok: true, data: { id } });
@@ -240,16 +388,17 @@ router.delete("/:id", requireRole(["admin", "supervisor"]), async (req, res) => 
 });
 
 /* =========================
-   EMPLEADO: start/finish
-   - empleado solo si la tarea es suya
-   - manager también permitido (por si lo ocupas)
+   EMPLEADO: start / finish
 ========================= */
 router.post("/:id/start", async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);
     const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+    }
 
     const task = snap.data();
     if (!ensureOwnTaskOrManager(task, req)) {
@@ -274,7 +423,10 @@ router.post("/:id/finish", async (req, res) => {
     const id = String(req.params.id);
     const ref = col.doc(id);
     const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+    }
 
     const task = snap.data();
     if (!ensureOwnTaskOrManager(task, req)) {
@@ -295,18 +447,17 @@ router.post("/:id/finish", async (req, res) => {
 });
 
 /* =========================
-   EMPLEADO: evidencia (JSON)
-   - comment requerido
-   - imageUrl opcional (Cloudinary)
-   - guarda en subcolección evidences
-   - (opcional) guarda última evidencia en el doc de la tarea
+   EMPLEADO: evidencia
 ========================= */
 router.post("/:id/evidence", async (req, res) => {
   try {
     const id = String(req.params.id);
     const ref = col.doc(id);
     const snap = await ref.get();
-    if (!snap.exists) return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, error: "tarea no encontrada" });
+    }
 
     const task = snap.data();
     if (!ensureOwnTaskOrManager(task, req)) {
@@ -314,11 +465,12 @@ router.post("/:id/evidence", async (req, res) => {
     }
 
     const comment = String(req.body?.comment || "").trim();
-    const imageUrl = String(req.body?.imageUrl || "").trim(); // Cloudinary secure_url
+    const imageUrl = String(req.body?.imageUrl || "").trim();
 
-    if (!comment) return res.status(400).json({ ok: false, error: "comment requerido" });
+    if (!comment) {
+      return res.status(400).json({ ok: false, error: "comment requerido" });
+    }
 
-    // 1) Guardar evidencia en subcolección tasks/{id}/evidences
     const evRef = await ref.collection("evidences").add({
       uid: req.uid,
       role: req.role,
@@ -327,7 +479,6 @@ router.post("/:id/evidence", async (req, res) => {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    // 2) Guardar "última evidencia" en la tarea (opcional pero útil)
     await ref.update({
       lastEvidence: {
         uid: req.uid,
@@ -338,8 +489,6 @@ router.post("/:id/evidence", async (req, res) => {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // ✅ 3) Crear reporte en Firestore (para que aparezca en la WEB y en el módulo Reportes móvil)
-    // Mapeo exacto a como tu web crea reports:
     const reportDoc = {
       createdAt: FieldValue.serverTimestamp(),
       employeeId: String(task?.employeeId || req.uid),
@@ -348,10 +497,10 @@ router.post("/:id/evidence", async (req, res) => {
       zoneId: String(task?.zoneId || ""),
       zoneNombre: String(task?.zoneNombre || ""),
       observaciones: comment,
-      photoURL: imageUrl,       // 👈 tu web usa photoURL
+      photoURL: imageUrl,
       status: "pendiente",
-      source: "mobile-evidence", // opcional para rastrear
-      evidenceId: evRef.id,      // opcional
+      source: "mobile-evidence",
+      evidenceId: evRef.id,
     };
 
     const repRef = await reportsCol.add(reportDoc);
@@ -362,8 +511,8 @@ router.post("/:id/evidence", async (req, res) => {
         taskId: id,
         evidenceId: evRef.id,
         reportId: repRef.id,
-        saved: true
-      }
+        saved: true,
+      },
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message || "error" });

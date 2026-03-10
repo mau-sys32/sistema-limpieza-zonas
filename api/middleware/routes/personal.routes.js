@@ -1,4 +1,3 @@
-// api/middleware/routes/personal.routes.js
 import { Router } from "express";
 import admin from "firebase-admin";
 
@@ -19,7 +18,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/personal  -> crea empleado (ID automático, sin UID)
+// POST /api/personal  -> crea empleado
 router.post("/", async (req, res) => {
   try {
     const nombre = String(req.body?.nombre || "").trim();
@@ -39,7 +38,7 @@ router.post("/", async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const ref = await col.add(payload); // ✅ ID automático
+    const ref = await col.add(payload);
     return res.status(201).json({ id: ref.id, ...payload });
   } catch (e) {
     console.error(e);
@@ -47,20 +46,24 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH /api/personal/:id  -> actualiza
+function buildSafePatch(body = {}) {
+  const safe = {};
+
+  if (body.nombre != null) safe.nombre = String(body.nombre).trim();
+  if (body.correo != null) safe.correo = String(body.correo).trim().toLowerCase();
+  if (body.rol != null) safe.rol = String(body.rol).trim().toLowerCase();
+  if (body.activo != null) safe.activo = !!body.activo;
+
+  safe.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+
+  return safe;
+}
+
+// PATCH /api/personal/:id
 router.patch("/:id", async (req, res) => {
   try {
     const id = req.params.id;
-
-    const patch = req.body || {};
-    const safe = {};
-
-    if (patch.nombre != null) safe.nombre = String(patch.nombre).trim();
-    if (patch.correo != null) safe.correo = String(patch.correo).trim().toLowerCase();
-    if (patch.rol != null) safe.rol = String(patch.rol).trim().toLowerCase();
-    if (patch.activo != null) safe.activo = !!patch.activo;
-
-    safe.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+    const safe = buildSafePatch(req.body);
 
     await col.doc(id).update(safe);
     return res.json({ ok: true, id });
@@ -70,7 +73,21 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/personal/:id  -> elimina
+// PUT /api/personal/:id
+router.put("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const safe = buildSafePatch(req.body);
+
+    await col.doc(id).update(safe);
+    return res.json({ ok: true, id });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e?.message || String(e) });
+  }
+});
+
+// DELETE /api/personal/:id
 router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;

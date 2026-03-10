@@ -66,12 +66,23 @@ button,
 .w-full{ width: 100%; }
 .only-mobile{ display: none; }
 
-/* Scroll */
-::-webkit-scrollbar{ width: 10px; height: 10px; }
-::-webkit-scrollbar-track{ background: transparent; }
-::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.15);
+::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track{
+  background: rgba(255,255,255,.04);
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.28);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,.40);
 }
 
 @media (prefers-reduced-motion: reduce){

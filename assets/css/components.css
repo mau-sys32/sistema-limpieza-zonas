@@ -18,7 +18,9 @@
   font-weight: 800;
 }
 
-.brand__name{ font-weight: 700; }
+.brand__name{
+  font-weight: 700;
+}
 
 .brand__sub{
   font-size: 12px;
@@ -100,18 +102,29 @@
   justify-content: center;
   gap: 8px;
   transition: transform .06s ease, background .15s ease, filter .15s ease;
+  white-space: nowrap;
 }
 
-.btn:hover{ background: rgba(255,255,255,.10); }
-.btn:active{ transform: translateY(1px); }
+.btn:hover{
+  background: rgba(255,255,255,.10);
+}
+
+.btn:active{
+  transform: translateY(1px);
+}
 
 .btn--primary{
   background: linear-gradient(180deg, rgba(91,140,255,.95), rgba(47,107,255,.95));
   border-color: rgba(47,107,255,.55);
 }
 
-.btn--primary:hover{ filter: brightness(1.05); }
-.btn--ghost{ background: transparent; }
+.btn--primary:hover{
+  filter: brightness(1.05);
+}
+
+.btn--ghost{
+  background: transparent;
+}
 
 .iconbtn{
   width: 40px;
@@ -150,6 +163,7 @@
   background: rgba(255,255,255,.04);
   color: var(--muted);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .badge--good{
@@ -327,19 +341,49 @@ select option{
 
 .toolbar{
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  gap: 14px;
   justify-content: space-between;
   margin-bottom: 12px;
 }
 
-.toolbar__left,
+.toolbar__left{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
 .toolbar__right{
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.toolbar__right .input{
+  width: 320px;
+  max-width: 100%;
+}
+
+.toolbar__right .btn{
+  flex: 0 0 auto;
+}
+
+.table td:last-child{
+  white-space: nowrap;
+}
+
+.table td:last-child .btn{
+  margin-right: 8px;
+}
+
+.table td:last-child .btn:last-child{
+  margin-right: 0;
 }
 
 /* =========================
@@ -352,7 +396,9 @@ select option{
   z-index: 60;
 }
 
-.modal.is-open{ display: block; }
+.modal.is-open{
+  display: block;
+}
 
 .modal__backdrop{
   position: absolute;
@@ -367,7 +413,7 @@ select option{
   margin: 64px auto;
   border-radius: 18px;
   border: 1px solid var(--border);
-  background: rgba(15, 23, 42, .95);
+  background: rgba(15,23,42,.95);
   box-shadow: 0 18px 60px rgba(0,0,0,.45);
   max-height: 85vh;
   overflow-y: auto;
@@ -502,8 +548,18 @@ select option{
   .toolbar__left,
   .toolbar__right{
     width: 100%;
+    margin-left: 0;
+  }
+
+  .toolbar__left{
+    align-items: flex-start;
+  }
+
+  .toolbar__right{
     flex-direction: column;
     align-items: stretch;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
   }
 
   .toolbar__right .input,
