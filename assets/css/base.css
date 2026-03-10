@@ -1,15 +1,18 @@
 /* =========================
-   RESET BÁSICO GLOBAL
+   RESET GLOBAL
 ========================= */
 *,
 *::before,
 *::after{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-html, body{ height:100%; }
+html,
+body{
+  height: 100%;
+}
 
 body{
   font-family: var(--font);
@@ -20,44 +23,61 @@ body{
 }
 
 h1,h2,h3,h4,h5,h6{
-  font-weight:600;
-  line-height:1.2;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-p{ margin-bottom:.6rem; }
+p{
+  margin-bottom: .6rem;
+}
 
-a{ text-decoration:none; color:inherit; }
+a{
+  text-decoration: none;
+  color: inherit;
+}
 
 button{
-  font-family:inherit;
-  border:none;
-  outline:none;
-  cursor:pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+  cursor: pointer;
 }
 
-input,select,textarea{
-  font-family:inherit;
-  outline:none;
+input,
+select,
+textarea{
+  font-family: inherit;
+  outline: none;
+}
+
+img,
+video{
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+.btn,
+.iconbtn{
+  min-height: var(--tap);
 }
 
 .muted{ color: var(--muted); }
-.w-full{ width:100%; }
+.w-full{ width: 100%; }
+.only-mobile{ display: none; }
 
-/*  Imágenes/videos no rompen layout */
-img, video{ max-width:100%; height:auto; }
-
-/*  Tap targets cómodos en móvil */
-button, .btn, .iconbtn{ min-height: var(--tap); }
-
-/* Scroll bonito */
-::-webkit-scrollbar{ width:10px; }
-::-webkit-scrollbar-track{ background:transparent; }
+/* Scroll */
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: transparent; }
 ::-webkit-scrollbar-thumb{
   background: rgba(255,255,255,.15);
-  border-radius:10px;
+  border-radius: 10px;
 }
 
-/*  Reduce motion si el usuario lo pide */
 @media (prefers-reduced-motion: reduce){
-  *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+  *{
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
 }

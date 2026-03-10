@@ -1,231 +1,6 @@
-.h1{ font-size: 22px; margin:0; }
-.sub{ color: var(--muted); margin-top:6px; }
-
-.section{
-  padding: 16px;
-}
-
-.kpi{
-  padding: 16px;
-}
-.kpi__top{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  margin-bottom: 10px;
-}
-.kpi__value{
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: .2px;
-}
-.kpi__label{ color: var(--muted); font-size: 13px; }
-
-.table{
-  width:100%;
-  border-collapse: collapse;
-  overflow:hidden;
-  border-radius: var(--r16);
-  border:1px solid var(--border);
-}
-.table th, .table td{
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  text-align:left;
-}
-.table th{ color: var(--muted); font-weight:600; font-size: 13px; }
-.table tr:hover td{ background: rgba(255,255,255,.04); }
-
-.toolbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom: 12px;
-}
-.toolbar__left, .toolbar__right{
-  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-}
-
 /* =========================
-   LOGIN ULTRA PRO (solo is-login)
-   ========================= */
-body.is-login .content{
-  position: relative;
-  min-height: 100vh;
-  overflow: hidden;
-  padding: 36px 18px;
-  background: #070B14;
-}
-
-/* Fondo con textura + gradientes + “luces” */
-body.is-login .content::before{
-  content:"";
-  position:absolute;
-  inset:-80px;
-  background:
-    radial-gradient(900px 520px at 18% 30%, rgba(70,120,255,.22), transparent 60%),
-    radial-gradient(800px 520px at 78% 72%, rgba(120,255,210,.12), transparent 60%),
-    radial-gradient(700px 420px at 60% 15%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.04), transparent 45%),
-    linear-gradient(120deg, #060913, #070B14 60%, #050814);
-  filter: blur(10px);
-  opacity: 1;
-}
-
-/* Grano (noise) para que se vea premium */
-body.is-login .content::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
-  opacity: .25;
-  mix-blend-mode: overlay;
-  pointer-events:none;
-}
-
-/* Centrado real */
-body.is-login #view{
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-/* Tarjeta: tamaño pro + glow controlado */
-body.is-login .login-card{
-  width: 100%;
-  max-width: 520px;
-  padding: 22px 22px 18px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(12, 16, 28, .72);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 22px 70px rgba(0,0,0,.60),
-    0 0 0 1px rgba(255,255,255,.06) inset;
-}
-
-/* Línea superior tipo “brand” */
-body.is-login .login-card{
-  position: relative;
-}
-body.is-login .login-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius: 20px;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(90,140,255,.55), rgba(120,255,210,.25), rgba(255,255,255,.08));
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  opacity: .55;
-  pointer-events: none;
-}
-
-/* Header */
-body.is-login .login-head{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-bottom: 14px;
-}
-
-body.is-login .login-logo{
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  display:grid;
-  place-items:center;
-  font-weight: 900;
-  letter-spacing: .6px;
-  color: rgba(255,255,255,.92);
-  background: linear-gradient(180deg, rgba(90,140,255,.40), rgba(90,140,255,.10));
-  border: 1px solid rgba(255,255,255,.10);
-}
-
-body.is-login .login-title{
-  margin:0;
-  font-size: 22px;
-  line-height: 1.2;
-}
-
-body.is-login .login-sub{
-  margin:4px 0 0;
-  font-size: 13px;
-  opacity: .78;
-}
-
-/* Form: que NO se vean inputs chiquitos */
-body.is-login .login-form{
-  margin-top: 10px;
-  display:grid;
-  gap: 14px;
-}
-
-body.is-login .login-label{
-  font-size: 12px;
-  opacity: .80;
-  margin-bottom: 7px;
-  display:block;
-}
-
-/* Inputs a lo ancho */
-body.is-login .login-input{
-  width: 100% !important;
-  height: 46px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.10);
-}
-
-body.is-login .login-input:focus{
-  outline: none;
-  border-color: rgba(90,140,255,.60);
-  box-shadow: 0 0 0 4px rgba(90,140,255,.14);
-}
-
-/* Acciones */
-body.is-login .login-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-body.is-login .login-actions .btn{
-  border-radius: 14px;
-  height: 44px;
-  padding: 0 16px;
-}
-
-/* Secundario */
-body.is-login .btn-quiet{
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.12);
-}
-
-/* Mensaje + mini footer */
-body.is-login .login-msg{
-  margin-top: 12px;
-  font-size: 13px;
-  opacity: .9;
-}
-
-body.is-login .login-mini{
-  margin-top: 14px;
-  display:flex;
-  justify-content:space-between;
-  font-size: 12px;
-  opacity: .55;
-}
-
-/* =========================
-   LOGIN: FULL SCREEN + RESPONSIVE
-   ========================= */
+   LOGIN PAGE
+========================= */
 body.is-login .content{
   position: relative;
   min-height: 100vh;
@@ -234,11 +9,10 @@ body.is-login .content{
   background: #070B14;
 }
 
-/* Fondo con gradientes */
 body.is-login .content::before{
-  content:"";
-  position:absolute;
-  inset:-80px;
+  content: "";
+  position: absolute;
+  inset: -80px;
   background:
     radial-gradient(900px 520px at 18% 30%, rgba(70,120,255,.22), transparent 60%),
     radial-gradient(800px 520px at 78% 72%, rgba(120,255,210,.12), transparent 60%),
@@ -248,18 +22,16 @@ body.is-login .content::before{
   filter: blur(10px);
 }
 
-/* textura/grain */
 body.is-login .content::after{
-  content:"";
-  position:absolute;
-  inset:0;
+  content: "";
+  position: absolute;
+  inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
   opacity: .25;
   mix-blend-mode: overlay;
-  pointer-events:none;
+  pointer-events: none;
 }
 
-/* centra */
 body.is-login #view{
   position: relative;
   z-index: 1;
@@ -267,9 +39,9 @@ body.is-login #view{
   justify-content: center;
   align-items: center;
   min-height: calc(100vh - 80px);
+  width: 100%;
 }
 
-/* tarjeta */
 body.is-login .login-card{
   width: min(520px, 100%);
   padding: 22px;
@@ -281,11 +53,10 @@ body.is-login .login-card{
   position: relative;
 }
 
-/* borde degradado */
 body.is-login .login-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
+  content: "";
+  position: absolute;
+  inset: 0;
   border-radius: 20px;
   padding: 1px;
   background: linear-gradient(135deg, rgba(90,140,255,.55), rgba(120,255,210,.25), rgba(255,255,255,.08));
@@ -293,15 +64,15 @@ body.is-login .login-card::before{
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
-          mask-composite: exclude;
+  mask-composite: exclude;
   opacity: .55;
-  pointer-events:none;
+  pointer-events: none;
 }
 
 body.is-login .login-head{
-  display:flex;
-  align-items:center;
-  gap:12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
@@ -309,8 +80,8 @@ body.is-login .login-logo{
   width: 46px;
   height: 46px;
   border-radius: 16px;
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   font-weight: 900;
   letter-spacing: .6px;
   background: linear-gradient(180deg, rgba(90,140,255,.40), rgba(90,140,255,.10));
@@ -318,20 +89,20 @@ body.is-login .login-logo{
 }
 
 body.is-login .login-title{
-  margin:0;
+  margin: 0;
   font-size: 22px;
   line-height: 1.2;
 }
 
 body.is-login .login-sub{
-  margin:4px 0 0;
+  margin: 4px 0 0;
   font-size: 13px;
   opacity: .78;
 }
 
 body.is-login .login-form{
   margin-top: 10px;
-  display:grid;
+  display: grid;
   gap: 14px;
 }
 
@@ -339,7 +110,7 @@ body.is-login .login-label{
   font-size: 12px;
   opacity: .80;
   margin-bottom: 7px;
-  display:block;
+  display: block;
 }
 
 body.is-login .login-input{
@@ -348,11 +119,18 @@ body.is-login .login-input{
   border-radius: 14px;
   background: rgba(255,255,255,.05);
   border: 1px solid rgba(255,255,255,.10);
+  color: var(--text);
+  padding: 0 14px;
+}
+
+body.is-login .login-input:focus{
+  border-color: rgba(90,140,255,.60);
+  box-shadow: 0 0 0 4px rgba(90,140,255,.14);
 }
 
 body.is-login .login-actions{
-  display:flex;
-  justify-content:flex-end;
+  display: flex;
+  justify-content: flex-end;
   gap: 10px;
   margin-top: 6px;
 }
@@ -376,15 +154,29 @@ body.is-login .login-msg{
 
 body.is-login .login-mini{
   margin-top: 14px;
-  display:flex;
-  justify-content:space-between;
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
   opacity: .55;
 }
 
 /* =========================
-   RESPONSIVE (móvil)
-   ========================= */
+   DASHBOARD / PAGES
+========================= */
+.table-wrap{
+  max-height: 420px;
+}
+
+@media (max-width: 640px){
+  .kpi__value{
+    font-size: 30px;
+  }
+
+  .table-wrap{
+    max-height: 340px;
+  }
+}
+
 @media (max-width: 520px){
   body.is-login .content{
     padding: 24px 12px;
@@ -412,88 +204,4 @@ body.is-login .login-mini{
     flex-direction: column;
     gap: 6px;
   }
-}
-
-/* =========================
-   DASHBOARD GRID RESPONSIVE
-   ========================= */
-
-/* Busca un contenedor típico de tarjetas: si usas .kgrid o .grid, lo forzamos */
-#view .kgrid{
-  display: grid !important;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 14px;
-}
-
-/* Las columnas que traes como .col-12 / .col-6 etc */
-#view .col-12{ grid-column: span 12; }
-#view .col-6{  grid-column: span 6; }
-#view .col-4{  grid-column: span 4; }
-#view .col-3{  grid-column: span 3; }
-
-/* Tablets */
-@media (max-width: 980px){
-  #view .col-4{ grid-column: span 6; }   /* 3 tarjetas -> 2 por fila */
-  #view .col-3{ grid-column: span 6; }
-}
-
-/* Móvil */
-@media (max-width: 620px){
-  #view .kgrid{ gap: 12px; }
-  #view .col-6,
-  #view .col-4,
-  #view .col-3{
-    grid-column: span 12; /* todo apilado */
-  }
-}
-
-/* =========================
-   DASHBOARD: compacto + pro
-   ========================= */
-
-/* cards KPI más compactos */
-.kpi{
-  padding: 16px !important;
-}
-
-.kpi__value{
-  font-size: 34px !important;
-  line-height: 1.1;
-  margin: 8px 0 4px;
-}
-
-/* tabla: evita que se vea gigante */
-.table-wrap{
-  max-height: 420px;
-  overflow: auto;
-}
-
-/* header tabla pegajoso */
-.table thead th{
-  position: sticky;
-  top: 0;
-  background: rgba(10,14,24,.92);
-  backdrop-filter: blur(6px);
-  z-index: 2;
-}
-
-/* grid responsive de tus .col-4 */
-.kgrid{
-  display: grid !important;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 14px;
-}
-
-.col-12{ grid-column: span 12; }
-.col-4{ grid-column: span 4; }
-
-@media (max-width: 980px){
-  .content{ padding: 18px 16px !important; }
-  .col-4{ grid-column: span 6; } /* 2 por fila */
-}
-
-@media (max-width: 640px){
-  .col-4{ grid-column: span 12; } /* 1 por fila */
-  .kpi__value{ font-size: 30px !important; }
-  .table-wrap{ max-height: 340px; }
 }

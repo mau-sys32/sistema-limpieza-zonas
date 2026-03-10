@@ -46,41 +46,70 @@ function isMobile() {
 
 function applySavedSidebarState() {
   const collapsed = localStorage.getItem("sidebarCollapsed") === "true";
-  document.body.classList.toggle("sidebar-collapsed", collapsed);
 
-  // en móvil, si está colapsado, aseguramos drawer cerrado
-  if (isMobile()) sidebarEl?.classList.remove("is-open");
-}
-
-applySavedSidebarState();
-
-btnSidebar?.addEventListener("click", () => {
   if (isMobile()) {
-    // móvil: abre/cierra drawer
-    const willOpen = !sidebarEl?.classList.contains("is-open");
-    sidebarEl?.classList.toggle("is-open", willOpen);
-
-    // guardamos como "no colapsado" si abrió, "colapsado" si cerró
-    document.body.classList.toggle("sidebar-collapsed", !willOpen);
-    localStorage.setItem("sidebarCollapsed", String(!willOpen));
+    document.body.classList.remove("sidebar-collapsed");
+    sidebarEl?.classList.remove("is-open");
     return;
   }
 
-  // desktop: colapsa sidebar
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarEl?.classList.remove("is-open");
+}
+
+function openSidebarMobile() {
+  if (!isMobile()) return;
+  sidebarEl?.classList.add("is-open");
+}
+
+function closeSidebarMobile() {
+  sidebarEl?.classList.remove("is-open");
+}
+
+function toggleSidebar() {
+  if (isMobile()) {
+    sidebarEl?.classList.toggle("is-open");
+    return;
+  }
+
   document.body.classList.toggle("sidebar-collapsed");
   localStorage.setItem(
     "sidebarCollapsed",
     String(document.body.classList.contains("sidebar-collapsed"))
   );
+}
+
+applySavedSidebarState();
+
+btnSidebar?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleSidebar();
+});
+
+// cerrar sidebar móvil al dar click fuera
+document.addEventListener("click", (e) => {
+  if (!isMobile()) return;
+  if (!sidebarEl?.classList.contains("is-open")) return;
+
+  const clickedInsideSidebar = sidebarEl?.contains(e.target);
+  const clickedToggle = btnSidebar?.contains(e.target);
+
+  if (!clickedInsideSidebar && !clickedToggle) {
+    closeSidebarMobile();
+  }
+});
+
+// cerrar sidebar móvil al dar click en una opción del menú
+document.querySelectorAll(".nav__item").forEach((item) => {
+  item.addEventListener("click", () => {
+    if (isMobile()) closeSidebarMobile();
+  });
 });
 
 // al cambiar tamaño, evita estados raros
 window.addEventListener("resize", () => {
-  if (!isMobile()) {
-    sidebarEl?.classList.remove("is-open");
-  }
+  applySavedSidebarState();
 });
-
 /* =========================
    AUTH WATCHER
 ========================= */
@@ -222,11 +251,16 @@ function applySessionUI(session, { isManager }) {
     btn.addEventListener("click", async () => {
       await logout();
       boot(null);
-      // móvil: cierra drawer
-      sidebarEl?.classList.remove("is-open");
-      document.body.classList.add("sidebar-collapsed");
-      localStorage.setItem("sidebarCollapsed", "true");
-      location.hash = "#/login";
+      // cerrar sidebar en móvil
+sidebarEl?.classList.remove("is-open");
+
+// solo colapsar en desktop
+if (!isMobile()) {
+  document.body.classList.add("sidebar-collapsed");
+  localStorage.setItem("sidebarCollapsed", "true");
+}
+
+location.hash = "#/login";
     });
     footer.appendChild(btn);
   }
