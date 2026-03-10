@@ -23,8 +23,10 @@ app.options("*", cors());
 app.use(express.json());
 
 // healthcheck
-app.get("/", (req, res) => res.send("API OK 🚀"));
+app.get("/", (req, res) => res.send("API OK"));
 
+console.log("✅ CARGADO server.js NUEVO");
+console.log("✅ tasksRouter montado en /api/tareas");
 // ✅ prefijo REST
 app.use("/api/me", meRouter);
 app.use("/api/zonas", zonesRouter);
