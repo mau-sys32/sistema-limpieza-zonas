@@ -299,6 +299,8 @@ router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
       },
     });
 
+    console.log(" INTENTANDO ENVIAR PUSH");
+
     // 2) Enviar push real al celular
     const pushResult = await sendPushToUser({
       employeeId: t.employeeId,
