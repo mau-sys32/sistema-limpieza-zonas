@@ -59,16 +59,13 @@ router.post("/photo", async (req, res) => {
   try {
     const photoURL = String(req.body?.photoURL || "").trim();
 
-    if (!photoURL) {
-      return res.status(400).json({
-        ok: false,
-        error: "photoURL requerida",
-      });
-    }
-
     return res.status(200).json({
       ok: true,
-      photoURL,
+      photoURL: photoURL || "",
+      uploaded: Boolean(photoURL),
+      message: photoURL
+        ? "photoURL recibida correctamente"
+        : "No se recibió photoURL; se continuará sin foto remota",
     });
   } catch (e) {
     return res.status(500).json({
