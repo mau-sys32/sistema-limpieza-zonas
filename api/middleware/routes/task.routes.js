@@ -113,23 +113,25 @@ function validateTask(t) {
 }
 
 async function createInternalNotification({
-  employeeId,
+  audienceTags,
   title,
   body,
   route = "/tareas",
-  type = "task_assigned",
+  type = "general",
   taskId = null,
+  reportId = null,
   extra = {},
 }) {
-  if (!employeeId) return null;
+  if (!Array.isArray(audienceTags) || audienceTags.length === 0) return null;
 
   const docRef = await notificationsCol.add({
-    audienceTags: [`user:${employeeId}`, "role:empleado"],
+    audienceTags,
     title,
     body,
     type,
     route,
     taskId,
+    reportId,
     readBy: [],
     createdAt: FieldValue.serverTimestamp(),
     ...extra,
@@ -186,7 +188,6 @@ async function sendPushToUser({
       data: {
         route: String(route),
         taskId: String(taskId || ""),
-        type: "task_assigned",
         title: String(title),
         body: String(body),
         ...Object.fromEntries(
@@ -214,6 +215,105 @@ async function sendPushToUser({
   }
 }
 
+async function getManagers() {
+  const result = [];
+
+  for (const roleValue of ["admin", "supervisor"]) {
+    const snap = await usersCol.where("rol", "==", roleValue).get();
+
+    snap.forEach((doc) => {
+      result.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+  }
+
+  return result;
+}
+
+async function notifyManagers({
+  title,
+  body,
+  route = "/reportes",
+  type = "general_manager_alert",
+  taskId = null,
+  reportId = null,
+  extra = {},
+}) {
+  const notificationId = await createInternalNotification({
+    audienceTags: ["role:admin", "role:supervisor"],
+    title,
+    body,
+    route,
+    type,
+    taskId,
+    reportId,
+    extra,
+  });
+
+  const managers = await getManagers();
+
+  const pushResults = [];
+
+  for (const manager of managers) {
+    const token = String(manager.fcmToken || "").trim();
+    if (!token) {
+      pushResults.push({
+        managerId: manager.id,
+        sent: false,
+        reason: "sin token",
+      });
+      continue;
+    }
+
+    try {
+      const message = {
+        token,
+        notification: {
+          title,
+          body,
+        },
+        data: {
+          route: String(route),
+          taskId: String(taskId || ""),
+          reportId: String(reportId || ""),
+          type: String(type),
+          ...Object.fromEntries(
+            Object.entries(extra).map(([k, v]) => [k, String(v ?? "")])
+          ),
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "cleaning_app_high",
+          },
+        },
+      };
+
+      const result = await admin.messaging().send(message);
+
+      pushResults.push({
+        managerId: manager.id,
+        sent: true,
+        result,
+      });
+    } catch (error) {
+      console.error("[FCM][MANAGERS] error:", error);
+      pushResults.push({
+        managerId: manager.id,
+        sent: false,
+        reason: error.message || "error enviando push",
+      });
+    }
+  }
+
+  return {
+    notificationId,
+    pushes: pushResults,
+  };
+}
+
 /* =========================
    GET /api/tareas
 ========================= */
@@ -221,8 +321,7 @@ router.get("/", async (req, res) => {
   try {
     const { fecha, employeeId, zoneId } = req.query;
 
-    const role = req.role;
-    const isManager = isManagerRole(role);
+    const isManager = isManagerRole(req.role);
 
     let q = col;
 
@@ -301,14 +400,11 @@ router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
       ? `Se te asignó una tarea en ${t.zoneNombre}`
       : "Se te asignó una nueva tarea";
 
-    console.log("[TASKS][POST] tarea creada:", taskId);
-    console.log("[TASKS][POST] employeeId:", t.employeeId);
-
     let notificationId = null;
 
     try {
       notificationId = await createInternalNotification({
-        employeeId: t.employeeId,
+        audienceTags: [`user:${t.employeeId}`, "role:empleado"],
         title: notifTitle,
         body: notifBody,
         route: "/tareas",
@@ -327,8 +423,6 @@ router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
       console.error("[TASKS][POST] error guardando notificación:", notifError);
     }
 
-    console.log("[TASKS][POST] intentando enviar push");
-
     const pushResult = await sendPushToUser({
       employeeId: t.employeeId,
       title: notifTitle,
@@ -339,6 +433,7 @@ router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
         zoneId: t.zoneId,
         zoneNombre: t.zoneNombre,
         prioridad: t.prioridad,
+        type: "task_assigned",
       },
     });
 
@@ -477,6 +572,7 @@ router.post("/:id/finish", async (req, res) => {
 
 /* =========================
    EMPLEADO: evidencia
+   -> notifica admin/supervisor
 ========================= */
 router.post("/:id/evidence", async (req, res) => {
   try {
@@ -534,6 +630,27 @@ router.post("/:id/evidence", async (req, res) => {
 
     const repRef = await reportsCol.add(reportDoc);
 
+    const managerTitle = "Nueva evidencia recibida";
+    const managerBody = task?.zoneNombre
+      ? `${task.employeeNombre || "Un empleado"} subió evidencia en ${task.zoneNombre}`
+      : `${task.employeeNombre || "Un empleado"} subió evidencia de una tarea`;
+
+    const managerNotifyResult = await notifyManagers({
+      title: managerTitle,
+      body: managerBody,
+      route: "/reportes",
+      type: "task_evidence",
+      taskId: id,
+      reportId: repRef.id,
+      extra: {
+        employeeId: String(task?.employeeId || req.uid),
+        employeeNombre: String(task?.employeeNombre || "Empleado"),
+        zoneId: String(task?.zoneId || ""),
+        zoneNombre: String(task?.zoneNombre || ""),
+        evidenceId: evRef.id,
+      },
+    });
+
     return res.status(201).json({
       ok: true,
       data: {
@@ -542,8 +659,10 @@ router.post("/:id/evidence", async (req, res) => {
         reportId: repRef.id,
         saved: true,
       },
+      managerNotification: managerNotifyResult,
     });
   } catch (e) {
+    console.error("[TASKS][EVIDENCE] Error:", e);
     res.status(500).json({ ok: false, error: e.message || "error" });
   }
 });

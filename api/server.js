@@ -6,6 +6,7 @@ import meRouter from "./middleware/routes/me.routes.js";
 import zonesRouter from "./middleware/routes/zones.routes.js";
 import tasksRouter from "./middleware/routes/task.routes.js";
 import personalRouter from "./middleware/routes/personal.routes.js";
+import reportesPublicosRouter from "./middleware/routes/reportes_publicos.routes.js";
 
 import admin from "firebase-admin";
 import "./firebaseAdmin.js";
@@ -25,11 +26,12 @@ app.use(express.json());
 // healthcheck
 app.get("/", (req, res) => res.send("API OK"));
 
-//  prefijo REST
+// prefijo REST
 app.use("/api/me", meRouter);
 app.use("/api/zonas", zonesRouter);
 app.use("/api/tareas", tasksRouter);
 app.use("/api/personal", personalRouter);
+app.use("/api/reportes-publicos", reportesPublicosRouter);
 
 // debug firebase users
 app.get("/api/debug/users", async (req, res) => {
@@ -61,6 +63,8 @@ app.get("/__routes", (req, res) => {
       "POST /api/personal",
       "PATCH /api/personal/:id",
       "DELETE /api/personal/:id",
+      "POST /api/reportes-publicos",
+      "POST /api/reportes-publicos/photo",
     ],
   });
 });
