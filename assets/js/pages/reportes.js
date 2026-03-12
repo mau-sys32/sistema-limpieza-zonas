@@ -14,7 +14,7 @@ export const Reportes = { view, mount };
 
 function view() {
   return `
-    <section class="page">
+    <section class="page page--reportes">
       <header class="page__header">
         <div>
           <h1>Reportes</h1>
@@ -24,19 +24,21 @@ function view() {
 
       <div class="card section">
         <div class="toolbar">
-          <div class="toolbar__left" style="gap:10px; align-items:center;">
-            <strong>Incidencias</strong>
-            <span class="badge">reports</span>
+          <div class="toolbar__left">
+            <div class="toolbar__top">
+              <strong>Incidencias</strong>
+              <span class="badge">reports</span>
+            </div>
 
-            <div style="display:flex; gap:8px; margin-left:10px; flex-wrap:wrap;">
-              <button class="btn btn--ghost" id="rpFilterAll">Todos</button>
+            <div class="filter-tabs">
+              <button class="btn btn--ghost is-active" id="rpFilterAll">Todos</button>
               <button class="btn btn--ghost" id="rpFilterPend">Pendientes</button>
               <button class="btn btn--ghost" id="rpFilterRes">Resueltos</button>
             </div>
           </div>
 
           <div class="toolbar__right">
-            <span class="muted" id="rpCount">—</span>
+            <span class="count-text" id="rpCount">—</span>
           </div>
         </div>
 
@@ -50,7 +52,7 @@ function view() {
                 <th>Descripción</th>
                 <th>Foto</th>
                 <th>Estado</th>
-                <th style="text-align:right;">Acciones</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="rpRows">
@@ -111,49 +113,57 @@ function mount() {
       return;
     }
 
-    tbody.innerHTML = rows.map(r => {
-      const fecha = fmtDate(r.createdAt);
-      const estado = String(r.status || "pendiente").toLowerCase();
+   tbody.innerHTML = rows.map(r => {
+  const fecha = fmtDate(r.createdAt);
+  const estado = String(r.status || "pendiente").toLowerCase();
 
-      const badge = estado === "resuelto"
-        ? `<span class="badge badge--good">Resuelto</span>
-           <div class="muted" style="font-size:12px;margin-top:4px;">
-             ${r.resolvedAt ? "Resuelto: " + fmtDate(r.resolvedAt) : ""}
-           </div>`
-        : `<span class="badge">Pendiente</span>`;
+  const badge = estado === "resuelto"
+    ? `
+      <div class="state-stack">
+        <span class="badge badge--good">Resuelto</span>
+        ${r.resolvedAt ? `<span class="meta-mini">Resuelto: ${fmtDate(r.resolvedAt)}</span>` : ""}
+      </div>
+    `
+    : `
+      <div class="state-stack">
+        <span class="badge badge--warn">Pendiente</span>
+      </div>
+    `;
 
-      const foto = r.photoURL
-        ? `
-          <div style="display:flex; align-items:center; gap:10px;">
-            <a href="${r.photoURL}" target="_blank" rel="noopener" title="Abrir foto">
-              <img src="${r.photoURL}" alt="foto" style="height:46px;width:72px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.10);">
-            </a>
-            <a class="btn btn--ghost" href="${r.photoURL}" target="_blank" rel="noopener">Abrir</a>
-          </div>
-        `
-        : `<span class="muted">—</span>`;
+  const foto = r.photoURL
+    ? `
+      <div class="media-inline">
+        <a href="${r.photoURL}" target="_blank" rel="noopener" title="Abrir foto">
+          <img src="${r.photoURL}" alt="foto" class="thumb">
+        </a>
+        <a class="btn btn--ghost" href="${r.photoURL}" target="_blank" rel="noopener">Abrir</a>
+      </div>
+    `
+    : `<span class="muted">—</span>`;
 
-      const btnResolve = estado === "resuelto"
-        ? `<button class="btn btn--ghost" disabled>Resuelto</button>`
-        : `<button class="btn btn--primary" data-act="resolve" data-id="${r.id}">Marcar resuelto</button>`;
+  const btnResolve = estado === "resuelto"
+    ? `<button class="btn btn--ghost" disabled>Resuelto</button>`
+    : `<button class="btn btn--primary" data-act="resolve" data-id="${r.id}">Marcar resuelto</button>`;
 
-      const btnDetail = `<button class="btn btn--ghost" data-act="detail" data-id="${r.id}">Ver detalle</button>`;
+  const btnDetail = `<button class="btn btn--ghost" data-act="detail" data-id="${r.id}">Ver detalle</button>`;
 
-      return `
-        <tr>
-          <td>${fecha}</td>
-          <td><strong>${esc(r.employeeNombre || "—")}</strong></td>
-          <td>${esc(r.zoneNombre || "—")}</td>
-          <td>${clip(esc(r.observaciones || ""), 80)}</td>
-          <td>${foto}</td>
-          <td>${badge}</td>
-          <td style="text-align:right; white-space:nowrap;">
-            ${btnDetail}
-            ${btnResolve}
-          </td>
-        </tr>
-      `;
-    }).join("");
+  return `
+    <tr>
+      <td class="cell-date">${fecha}</td>
+      <td class="cell-employee"><strong>${esc(r.employeeNombre || "—")}</strong></td>
+      <td class="cell-zone">${esc(r.zoneNombre || "—")}</td>
+      <td class="cell-text cell-text--clip">${clip(esc(r.observaciones || ""), 80)}</td>
+      <td class="cell-photo">${foto}</td>
+      <td class="cell-status">${badge}</td>
+      <td class="cell-actions">
+        <div class="actions">
+          ${btnDetail}
+          ${btnResolve}
+        </div>
+      </td>
+    </tr>
+  `;
+}).join("");
   }
 
   tbody?.addEventListener("click", async (e) => {

@@ -7,7 +7,7 @@ import { requireRole } from "../roles.middleware.js";
 const router = Router();
 const col = db.collection("zones");
 
-// ✅ auth para todo
+
 router.use(requireAuth);
 
 function pickZone(body = {}) {

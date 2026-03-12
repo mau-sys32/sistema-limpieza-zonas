@@ -232,7 +232,7 @@ function applySessionUI(session, { isManager }) {
   setNavVisible("historial", isManager);
   setNavVisible("reportes", isManager);
 
-  // ✅ Logout profesional: 1 solo botón (si hay sesión)
+  // Logout profesional: 1 solo botón (si hay sesión)
   const footer = document.querySelector(".sidebar__footer");
 
   // si no hay sesión: elimina botón logout si existe
@@ -265,3 +265,15 @@ location.hash = "#/login";
     footer.appendChild(btn);
   }
 }
+
+window.addEventListener("load", () => {
+  const loader = document.getElementById("appLoader");
+  if (loader) {
+    loader.style.opacity = "0";
+    loader.style.pointerEvents = "none";
+
+    setTimeout(() => {
+      loader.remove();
+    }, 300);
+  }
+});

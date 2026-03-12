@@ -12,6 +12,72 @@ const notificationsCol = db.collection("notifications");
 /* =========================
    AUTH + ROLE
 ========================= */
+async function notifyEmployee({
+  employeeId,
+  title,
+  body,
+  route = "/tareas",
+  taskId = "",
+}) {
+  try {
+
+    if (!employeeId) {
+      console.log("[NOTIFY] employeeId vacío");
+      return;
+    }
+
+    const userSnap = await usersCol.doc(employeeId).get();
+
+    if (!userSnap.exists) {
+      console.log("[NOTIFY] usuario no encontrado");
+      return;
+    }
+
+    const userData = userSnap.data() || {};
+    const token = String(userData.fcmToken || "").trim();
+
+    console.log("[NOTIFY] token:", token ? "OK" : "NO TOKEN");
+
+    // 1️⃣ Guardar notificación interna
+    await notificationsCol.add({
+      audienceTags: [`user:${employeeId}`, "role:empleado"],
+      title,
+      body,
+      route,
+      type: "task_assigned",
+      taskId,
+      readBy: [],
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    // 2️⃣ Enviar push si hay token
+    if (!token) return;
+
+    const message = {
+      token,
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        route,
+        taskId,
+      },
+      android: {
+        priority: "high",
+      },
+    };
+
+    const result = await admin.messaging().send(message);
+
+    console.log("[NOTIFY] push enviado:", result);
+
+  } catch (err) {
+    console.error("[NOTIFY] error:", err);
+  }
+}
+
+
 async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
@@ -161,6 +227,7 @@ async function sendPushToUser({
       nombre: userData.nombre,
       rol: userData.rol || userData.role,
       hasToken: !!token,
+      tokenPreview: token ? `${token.slice(0, 25)}...` : "",
     });
 
     if (!token) {
@@ -192,8 +259,10 @@ async function sendPushToUser({
       },
     };
 
-    console.log("[FCM] enviando mensaje...");
+    console.log("[FCM] enviando mensaje:", JSON.stringify(message, null, 2));
+
     const result = await admin.messaging().send(message);
+
     console.log("[FCM] enviado ok:", result);
 
     return { sent: true, result };
@@ -267,37 +336,21 @@ router.get("/mias", async (req, res) => {
 ========================= */
 router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
   try {
-    const t = pickTask(req.body);
-    const err = validateTask(t);
-    if (err) return res.status(400).json({ ok: false, error: err });
-
-    const docRef = await col.add({
-      ...t,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
     const taskId = docRef.id;
 
-    const notifTitle = "Nueva tarea asignada";
-    const notifBody = t.zoneNombre
-      ? `Se te asignó una tarea en la zona ${t.zoneNombre}.`
-      : "Se te asignó una nueva tarea.";
+const notifTitle = "Nueva tarea asignada";
 
-    // 1) Crear notificación interna para el diálogo e historial
-    const notificationId = await createInternalNotification({
-      employeeId: t.employeeId,
-      title: notifTitle,
-      body: notifBody,
-      route: "/tareas",
-      type: "task_assigned",
-      taskId,
-      extra: {
-        zoneId: t.zoneId,
-        zoneNombre: t.zoneNombre,
-        prioridad: t.prioridad,
-      },
-    });
+const notifBody = t.zoneNombre
+  ? `Se te asignó una tarea en ${t.zoneNombre}`
+  : "Se te asignó una nueva tarea";
+
+await notifyEmployee({
+  employeeId: t.employeeId,
+  title: notifTitle,
+  body: notifBody,
+  route: "/tareas",
+  taskId,
+});
 
     console.log(" INTENTANDO ENVIAR PUSH");
 

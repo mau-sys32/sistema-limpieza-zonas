@@ -10,7 +10,7 @@ export const Historial = { view, mount };
 
 function view() {
   return `
-  <section class="page">
+  <section class="page page--historial">
     <header class="page__header">
       <div>
         <h1>Historial</h1>
@@ -23,7 +23,14 @@ function view() {
           <option value="15">Quincenal</option>
           <option value="30" selected>Mensual</option>
         </select>
-        <input id="hisSearch" class="input" type="search" placeholder="Buscar por zona..." />
+
+        <input
+          id="hisSearch"
+          class="input"
+          type="search"
+          placeholder="Buscar por zona..."
+        />
+
         <button id="hisCsv" class="btn">Exportar CSV</button>
       </div>
     </header>
@@ -45,8 +52,9 @@ function view() {
           </tbody>
         </table>
       </div>
+
       <div class="footerline">
-        <span id="hisCount" class="muted">—</span>
+        <span id="hisCount" class="count-line">—</span>
       </div>
     </div>
   </section>`;
@@ -133,14 +141,14 @@ function mount() {
     }
 
     tbody.innerHTML = list.map(t => `
-      <tr>
-        <td>${fmtDateTime(getTaskDate(t))}</td>
-        <td><strong>${esc(t.zoneNombre || "—")}</strong></td>
-        <td>${esc(lastActionForTask(t.id))}</td>
-        <td>${StatusUI.badge(t.estado)}</td>
-        <td>${diffMinutes(t.inicio, t.fin)}</td>
-      </tr>
-    `).join("");
+  <tr>
+    <td class="cell-date">${fmtDateTime(getTaskDate(t))}</td>
+    <td class="cell-zone"><strong>${esc(t.zoneNombre || "—")}</strong></td>
+    <td class="cell-action">${esc(lastActionForTask(t.id))}</td>
+    <td class="cell-status">${StatusUI.badge(t.estado)}</td>
+    <td class="cell-time">${diffMinutes(t.inicio, t.fin)}</td>
+  </tr>
+`).join("");
 
     count.textContent = `Mostrando ${list.length} registro(s) · últimos ${range.value} días.`;
   }

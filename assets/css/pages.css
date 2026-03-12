@@ -10,25 +10,24 @@ body.is-login .content{
 }
 
 body.is-login .content::before{
-  content: "";
-  position: absolute;
-  inset: -80px;
+  content:"";
+  position:absolute;
+  inset:0;
   background:
-    radial-gradient(900px 520px at 18% 30%, rgba(70,120,255,.22), transparent 60%),
-    radial-gradient(800px 520px at 78% 72%, rgba(120,255,210,.12), transparent 60%),
-    radial-gradient(700px 420px at 60% 15%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.04), transparent 45%),
-    linear-gradient(120deg, #060913, #070B14 60%, #050814);
-  filter: blur(10px);
+    radial-gradient(circle at 20% 25%, rgba(91,140,255,.25), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(34,197,94,.15), transparent 50%),
+    radial-gradient(circle at 60% 10%, rgba(255,255,255,.08), transparent 40%),
+    linear-gradient(135deg,#050814,#0b1326 60%,#050814);
+  filter: blur(40px);
 }
 
 body.is-login .content::after{
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
-  opacity: .25;
-  mix-blend-mode: overlay;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 30%),
+    radial-gradient(circle at center, rgba(255,255,255,.03), transparent 65%);
   pointer-events: none;
 }
 
@@ -277,5 +276,161 @@ body.is-login .login-mini{
   .table-wrap{
     margin: 0;
     padding-bottom: 4px;
+  }
+}
+
+/* =========================
+   REPORTES PAGE
+========================= */
+.page--reportes .card.section{
+  padding: 20px;
+}
+
+.page--reportes .toolbar{
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.page--reportes .toolbar__left{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.page--reportes .toolbar__top{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page--reportes .toolbar__right{
+  align-items: center;
+}
+
+.page--reportes .table-wrap{
+  max-height: none;
+}
+
+.page--reportes .table th,
+.page--reportes .table td{
+  padding: 14px 14px;
+}
+
+.page--reportes .table td{
+  vertical-align: middle;
+}
+
+.page--reportes .table th:last-child,
+.page--reportes .table td:last-child{
+  text-align: right;
+}
+
+.page--reportes .badge{
+  font-size: 12px;
+}
+
+.page--reportes .btn{
+  min-height: 42px;
+}
+
+@media (max-width: 768px){
+  .page--reportes .card.section{
+    padding: 14px;
+  }
+
+  .page--reportes .toolbar{
+    align-items: stretch;
+  }
+
+  .page--reportes .toolbar__right{
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page--reportes .table th:last-child,
+  .page--reportes .table td:last-child{
+    text-align: left;
+  }
+}
+
+/* =========================
+   HISTORIAL PAGE
+========================= */
+.page--historial .page__header{
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.page--historial .card.section{
+  padding: 20px;
+}
+
+.page--historial .table-wrap{
+  max-height: none;
+}
+
+.page--historial .table th,
+.page--historial .table td{
+  padding: 14px 14px;
+}
+
+.page--historial .table td{
+  vertical-align: middle;
+}
+
+.page--historial .cell-date{
+  min-width: 170px;
+  line-height: 1.45;
+}
+
+.page--historial .cell-zone{
+  min-width: 160px;
+}
+
+.page--historial .cell-action{
+  min-width: 140px;
+}
+
+.page--historial .cell-status{
+  min-width: 130px;
+}
+
+.page--historial .cell-time{
+  min-width: 90px;
+}
+
+.page--historial .footerline{
+  margin-top: 14px;
+  padding-top: 6px;
+}
+
+@media (max-width: 768px){
+  .page--historial .card.section{
+    padding: 14px;
+  }
+
+  .page--historial .page__header{
+    margin-bottom: 14px;
+  }
+}
+
+/* =========================
+   PAGE ANIMATION
+========================= */
+.page{
+  animation: pageFade .25s ease;
+}
+
+@keyframes pageFade{
+  from{
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -2,11 +2,16 @@
 import { db, auth } from "../firebase/config.js";
 import { StatusUI, Modal } from "../ui.js";
 
-// REST wrappers
-import { tasksList, tasksCreate, tasksUpdate, tasksDelete } from "../firebase/tasks.db.js";
-import { zonesList } from "../firebase/zones.db.js";
+import {
+  tasksList,
+  tasksCreate,
+  tasksUpdate,
+  tasksDelete,
+  tasksStart,
+  tasksFinish
+} from "../firebase/tasks.db.js";
 
-// Cloudinary uploader (ya lo tienes)
+import { zonesList } from "../firebase/zones.db.js";
 import { uploadImageToCloudinary } from "../cloudinary.js";
 
 import {
@@ -94,7 +99,6 @@ function mount() {
   let zonas = [];
   let editingId = null;
 
-  // manager only
   if (!isManager && btnNew) btnNew.style.display = "none";
 
   btnNew?.addEventListener("click", () => openCreate());
@@ -102,30 +106,34 @@ function mount() {
   btnClose?.addEventListener("click", closeModal);
   search?.addEventListener("input", () => renderTable(filterRows(all, search.value)));
 
-  // ✅ UN SOLO LISTENER: acciones tabla (edit/del/start/finish/report)
   tbody?.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("button[data-act]");
     if (!btn || btn.disabled) return;
 
     inlineMsg.textContent = "";
 
-    const act = btn.dataset.act;   // ✅ aquí se declara primero
+    const act = btn.dataset.act;
     const id = btn.dataset.id;
 
-    const t = all.find(x => String(x.id) === String(id));
+    const t = all.find((x) => String(x.id) === String(id));
     if (!t) return;
 
     try {
-      if (act === "edit") return openEdit(t);
+      if (act === "edit") {
+        openEdit(t);
+        return;
+      }
 
       if (act === "del") {
         if (!isManager) return;
+
         const ok = confirm(`¿Eliminar tarea de "${t.employeeNombre}" en "${t.zoneNombre}"?`);
         if (!ok) return;
 
         await tasksDelete(id);
         await addHistory("ELIMINADA", t, { estado: t.estado || "Pendiente" });
         inlineMsg.textContent = "Eliminada ✅";
+        await refreshTasks();
         return;
       }
 
@@ -136,10 +144,19 @@ function mount() {
           return;
         }
 
-        const now = new Date().toISOString();
-        await tasksUpdate(id, { estado: "En proceso", inicio: now, updatedAt: now });
-        await addHistory("INICIADA", { ...t, estado: "En proceso", inicio: now }, { estado: "En proceso", inicio: now });
+        const updated = await tasksStart(id);
+
+        await addHistory(
+          "INICIADA",
+          { ...t, ...updated },
+          {
+            estado: updated?.estado || "En proceso",
+            inicio: updated?.inicio ?? t.inicio ?? null
+          }
+        );
+
         inlineMsg.textContent = "Iniciada ✅";
+        await refreshTasks();
         return;
       }
 
@@ -150,17 +167,28 @@ function mount() {
           return;
         }
 
-        const now = new Date().toISOString();
-        await tasksUpdate(id, { estado: "Finalizada", fin: now, updatedAt: now });
-        await addHistory("FINALIZADA", { ...t, estado: "Finalizada", fin: now }, { estado: "Finalizada", fin: now });
+        const updated = await tasksFinish(id);
+
+        await addHistory(
+          "FINALIZADA",
+          { ...t, ...updated },
+          {
+            estado: updated?.estado || "Finalizada",
+            fin: updated?.fin ?? t.fin ?? null
+          }
+        );
+
         inlineMsg.textContent = "Finalizada ✅";
+        await refreshTasks();
         return;
       }
 
-      // ✅ REPORTE (empleado)
       if (act === "report") {
-        if (!session) return alert("Sin sesión.");
-        return openReportModal(t, session);
+        if (!session) {
+          alert("Sin sesión.");
+          return;
+        }
+        openReportModal(t, session);
       }
     } catch (e) {
       inlineMsg.textContent = `Error: ${e?.message || e}`;
@@ -168,7 +196,6 @@ function mount() {
     }
   });
 
-  // Guardar tarea (solo manager)
   btnSave?.addEventListener("click", async () => {
     if (!isManager) return;
 
@@ -187,8 +214,9 @@ function mount() {
       if (!empId) throw new Error("Selecciona empleado.");
       if (!zonaId) throw new Error("Selecciona zona.");
 
-      const emp = empleados.find(e => e.id === empId);
-      const zona = zonas.find(z => z.id === zonaId);
+      const emp = empleados.find((e) => e.id === empId);
+      const zona = zonas.find((z) => z.id === zonaId);
+
       if (!emp) throw new Error("Empleado inválido.");
       if (!zona) throw new Error("Zona inválida.");
 
@@ -221,6 +249,7 @@ function mount() {
       }
 
       closeModal();
+      await refreshTasks();
     } catch (e) {
       msg.textContent = e?.message || String(e);
     } finally {
@@ -241,13 +270,18 @@ function mount() {
     const qEmp = query(collection(db, "users"), where("activo", "==", true));
     const snap = await getDocs(qEmp);
 
-    empleados = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .filter(u => (u.rol || "").toLowerCase() === "empleado")
-      .sort((a,b) => (a.nombre || "").localeCompare(b.nombre || ""));
+    empleados = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((u) => (u.rol || "").toLowerCase() === "empleado")
+      .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 
     mEmp.innerHTML =
       `<option value="">Selecciona...</option>` +
-      empleados.map(u => `<option value="${u.id}">${esc(u.nombre)} (${esc(u.correo)})</option>`).join("");
+      empleados
+        .map(
+          (u) => `<option value="${u.id}">${esc(u.nombre)} (${esc(u.correo)})</option>`
+        )
+        .join("");
   }
 
   async function loadZonas() {
@@ -256,7 +290,33 @@ function mount() {
 
     mZona.innerHTML =
       `<option value="">Selecciona...</option>` +
-      zonas.map(z => `<option value="${z.id}">${esc(z.nombre)} — ${esc(z.area || "")}</option>`).join("");
+      zonas
+        .map(
+          (z) => `<option value="${z.id}">${esc(z.nombre)} — ${esc(z.area || "")}</option>`
+        )
+        .join("");
+  }
+
+  async function refreshTasks() {
+    const uid = auth.currentUser?.uid || null;
+    if (!uid) {
+      all = [];
+      renderTable([]);
+      return;
+    }
+
+    const list = await tasksList();
+    let rows = Array.isArray(list) ? list : [];
+
+    if (!isManager) {
+      rows = rows.filter((t) => (t.employeeId || "") === uid);
+    }
+
+    all = rows
+      .map((t) => ({ ...t, id: String(t.id) }))
+      .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
+
+    renderTable(filterRows(all, search.value));
   }
 
   function attachPolling() {
@@ -271,6 +331,7 @@ function mount() {
     }
 
     window.__unsubTasks && window.__unsubTasks();
+
     let alive = true;
     let pulling = false;
 
@@ -279,18 +340,7 @@ function mount() {
       pulling = true;
 
       try {
-        const list = await tasksList();
-        let rows = Array.isArray(list) ? list : [];
-
-        if (!isManager) {
-          rows = rows.filter(t => (t.employeeId || "") === uid);
-        }
-
-        all = rows
-          .map(t => ({ ...t, id: String(t.id) }))
-          .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
-
-        renderTable(filterRows(all, search.value));
+        await refreshTasks();
       } catch (err) {
         console.error(err);
         tbody.innerHTML = `<tr><td colspan="6" class="muted">Error cargando tareas.</td></tr>`;
@@ -329,37 +379,38 @@ function mount() {
       return;
     }
 
-    tbody.innerHTML = list.map(t => {
-      let acciones = `<span class="muted">—</span>`;
+    tbody.innerHTML = list
+      .map((t) => {
+        let acciones = `<span class="muted">—</span>`;
 
-      if (isManager) {
-        acciones = `
-          <button class="btn btn--ghost" data-act="edit" data-id="${t.id}">Editar</button>
-          <button class="btn btn--danger" data-act="del" data-id="${t.id}">Eliminar</button>
+        if (isManager) {
+          acciones = `
+            <button class="btn btn--ghost" data-act="edit" data-id="${t.id}">Editar</button>
+            <button class="btn btn--danger" data-act="del" data-id="${t.id}">Eliminar</button>
+          `;
+        } else if (isEmpleado) {
+          const startOk = canStart(t, uid);
+          const finishOk = canFinish(t, uid);
+
+          acciones = `
+            <button class="btn btn--start" data-act="start" data-id="${t.id}" ${startOk ? "" : "disabled"}>Comenzar</button>
+            <button class="btn" data-act="report" data-id="${t.id}">Reportar</button>
+            <button class="btn btn--finish" data-act="finish" data-id="${t.id}" ${finishOk ? "" : "disabled"}>Finalizar</button>
+          `;
+        }
+
+        return `
+          <tr>
+            <td>${esc(t.fecha || "")}</td>
+            <td><strong>${esc(t.employeeNombre || "")}</strong></td>
+            <td>${esc(t.zoneNombre || "")}</td>
+            <td><span class="pill">${esc(t.prioridad || "")}</span></td>
+            <td>${StatusUI.badge(t.estado)}</td>
+            <td style="text-align:right;">${acciones}</td>
+          </tr>
         `;
-      } else if (isEmpleado) {
-        const startOk = canStart(t, uid);
-        const finishOk = canFinish(t, uid);
-
-        // ✅ Reportar siempre disponible para el empleado
-        acciones = `
-          <button class="btn btn--start" data-act="start" data-id="${t.id}" ${startOk ? "" : "disabled"}>Comenzar</button>
-          <button class="btn" data-act="report" data-id="${t.id}">Reportar</button>
-          <button class="btn btn--finish" data-act="finish" data-id="${t.id}" ${finishOk ? "" : "disabled"}>Finalizar</button>
-        `;
-      }
-
-      return `
-        <tr>
-          <td>${esc(t.fecha || "")}</td>
-          <td><strong>${esc(t.employeeNombre || "")}</strong></td>
-          <td>${esc(t.zoneNombre || "")}</td>
-          <td><span class="pill">${esc(t.prioridad || "")}</span></td>
-          <td>${StatusUI.badge(t.estado)}</td>
-          <td style="text-align:right;">${acciones}</td>
-        </tr>
-      `;
-    }).join("");
+      })
+      .join("");
 
     count.textContent = `Mostrando ${list.length} tarea(s).`;
   }
@@ -406,85 +457,82 @@ function mount() {
     modal.setAttribute("aria-hidden", "true");
   }
 
-function openReportModal(task, session) {
-  // Asegura que el modal exista e inicialice listeners
-  Modal.init?.();
+  function openReportModal(task, session) {
+    Modal.init?.();
 
-  Modal.open({
-    title: "Reportar incidencia",
-    body: `
-      <div class="field">
-        <label class="muted">Zona</label>
-        <input class="input" value="${esc(task.zoneNombre || "—")}" disabled />
-      </div>
+    Modal.open({
+      title: "Reportar incidencia",
+      body: `
+        <div class="field">
+          <label class="muted">Zona</label>
+          <input class="input" value="${esc(task.zoneNombre || "—")}" disabled />
+        </div>
 
-      <div class="field">
-        <label class="muted">Descripción *</label>
-        <textarea class="input" id="rpObs" rows="4" placeholder="Describe el problema..."></textarea>
-      </div>
+        <div class="field">
+          <label class="muted">Descripción *</label>
+          <textarea class="input" id="rpObs" rows="4" placeholder="Describe el problema..."></textarea>
+        </div>
 
-      <div class="field">
-        <label class="muted">Foto (opcional)</label>
-        <input class="input" id="rpFile" type="file" accept="image/*" />
-        <p class="muted" style="font-size:12px;margin-top:8px;">
-          La foto se sube a Cloudinary y el link se guarda en Firestore.
-        </p>
-      </div>
+        <div class="field">
+          <label class="muted">Foto (opcional)</label>
+          <input class="input" id="rpFile" type="file" accept="image/*" />
+          <p class="muted" style="font-size:12px;margin-top:8px;">
+            La foto se sube a Cloudinary y el link se guarda en Firestore.
+          </p>
+        </div>
 
-      <p class="sub" id="rpMsg" style="margin-top:10px;"></p>
-    `,
-    footer: `
-      <button class="btn" data-close="1">Cerrar</button>
-      <button class="btn btn--primary" id="rpSend">Enviar</button>
-    `
-  });
+        <p class="sub" id="rpMsg" style="margin-top:10px;"></p>
+      `,
+      footer: `
+        <button class="btn" data-close="1">Cerrar</button>
+        <button class="btn btn--primary" id="rpSend">Enviar</button>
+      `
+    });
 
-  const btnSend = document.getElementById("rpSend");
-  const msgEl = document.getElementById("rpMsg");
+    const btnSend = document.getElementById("rpSend");
+    const msgEl = document.getElementById("rpMsg");
 
-  btnSend?.addEventListener("click", async () => {
-    const obs = (document.getElementById("rpObs")?.value || "").trim();
-    const file = document.getElementById("rpFile")?.files?.[0] || null;
+    btnSend?.addEventListener("click", async () => {
+      const obs = (document.getElementById("rpObs")?.value || "").trim();
+      const file = document.getElementById("rpFile")?.files?.[0] || null;
 
-    if (!obs) {
-      msgEl.textContent = "Escribe la descripción.";
-      return;
-    }
-
-    btnSend.disabled = true;
-    msgEl.textContent = "Enviando...";
-
-    try {
-      let photoURL = "";
-
-      // ✅ Foto opcional -> Cloudinary
-      if (file) {
-        // IMPORTANTE: esto usa tu /assets/js/cloudinary.js
-        photoURL = await uploadImageToCloudinary(file);
+      if (!obs) {
+        msgEl.textContent = "Escribe la descripción.";
+        return;
       }
 
-      // ✅ Guarda reporte en Firestore
-      await addDoc(collection(db, "reports"), {
-        createdAt: serverTimestamp(),
-        employeeId: session.uid,
-        employeeNombre: session.nombre || "Empleado",
-        taskId: String(task.id || ""),
-        zoneId: String(task.zoneId || ""),
-        zoneNombre: task.zoneNombre || "",
-        observaciones: obs,
-        photoURL,
-        status: "pendiente"
-      });
+      btnSend.disabled = true;
+      msgEl.textContent = "Enviando...";
 
-      msgEl.textContent = "✅ Reporte enviado.";
-      setTimeout(() => Modal.close(), 700);
-    } catch (err) {
-      console.error(err);
-      msgEl.textContent = "❌ Error: " + (err?.message || err);
-      btnSend.disabled = false;
-    }
-  });
-}
+      try {
+        let photoURL = "";
+
+        if (file) {
+          photoURL = await uploadImageToCloudinary(file);
+        }
+
+        await addDoc(collection(db, "reports"), {
+          createdAt: serverTimestamp(),
+          employeeId: session.uid,
+          employeeNombre: session.nombre || "Empleado",
+          taskId: String(task.id || ""),
+          zoneId: String(task.zoneId || ""),
+          zoneNombre: task.zoneNombre || "",
+          observaciones: obs,
+          photoURL,
+          status: "pendiente"
+        });
+
+        msgEl.textContent = "✅ Reporte enviado.";
+        setTimeout(() => Modal.close(), 700);
+      } catch (err) {
+        console.error(err);
+        msgEl.textContent = "❌ Error: " + (err?.message || err);
+        btnSend.disabled = false;
+      }
+    });
+  }
+
   async function addHistory(accion, task, patch = {}) {
     const actorId = auth.currentUser?.uid || "";
     const actorRol = rol || "empleado";
@@ -508,8 +556,6 @@ function openReportModal(task, session) {
     await addDoc(collection(db, "history"), payload);
   }
 }
-
-/* ===== modal tarea (manager) ===== */
 
 function modalMarkup() {
   return `
@@ -568,9 +614,9 @@ function modalMarkup() {
   </div>`;
 }
 
-/* ===== utils ===== */
-
-function qs(sel, root = document) { return root.querySelector(sel); }
+function qs(sel, root = document) {
+  return root.querySelector(sel);
+}
 
 function esc(s) {
   return String(s ?? "")
@@ -584,7 +630,8 @@ function esc(s) {
 function filterRows(rows, term) {
   const q = (term || "").trim().toLowerCase();
   if (!q) return rows;
-  return rows.filter(t =>
+
+  return rows.filter((t) =>
     (t.employeeNombre || "").toLowerCase().includes(q) ||
     (t.zoneNombre || "").toLowerCase().includes(q) ||
     (t.estado || "").toLowerCase().includes(q) ||

@@ -25,9 +25,7 @@ app.use(express.json());
 // healthcheck
 app.get("/", (req, res) => res.send("API OK"));
 
-console.log("✅ CARGADO server.js NUEVO");
-console.log("✅ tasksRouter montado en /api/tareas");
-// ✅ prefijo REST
+//  prefijo REST
 app.use("/api/me", meRouter);
 app.use("/api/zonas", zonesRouter);
 app.use("/api/tareas", tasksRouter);
@@ -76,5 +74,5 @@ app.get("/api/debug/auth-header", (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`🚀 API corriendo en puerto ${PORT}`);
+  console.log(`API corriendo en puerto ${PORT}`);
 });

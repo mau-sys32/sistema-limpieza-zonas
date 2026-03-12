@@ -6,7 +6,7 @@ export function requireRole(...roles) {
 
   return async (req, res, next) => {
     try {
-      const uid = req.user?.uid; // ✅ tu auth lo deja aquí
+      const uid = req.user?.uid;
       if (!uid) return res.status(401).json({ ok: false, error: "No auth" });
 
       const snap = await db.collection("users").doc(uid).get();
