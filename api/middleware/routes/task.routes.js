@@ -12,77 +12,14 @@ const notificationsCol = db.collection("notifications");
 /* =========================
    AUTH + ROLE
 ========================= */
-async function notifyEmployee({
-  employeeId,
-  title,
-  body,
-  route = "/tareas",
-  taskId = "",
-}) {
-  try {
-
-    if (!employeeId) {
-      console.log("[NOTIFY] employeeId vacío");
-      return;
-    }
-
-    const userSnap = await usersCol.doc(employeeId).get();
-
-    if (!userSnap.exists) {
-      console.log("[NOTIFY] usuario no encontrado");
-      return;
-    }
-
-    const userData = userSnap.data() || {};
-    const token = String(userData.fcmToken || "").trim();
-
-    console.log("[NOTIFY] token:", token ? "OK" : "NO TOKEN");
-
-    // 1️⃣ Guardar notificación interna
-    await notificationsCol.add({
-      audienceTags: [`user:${employeeId}`, "role:empleado"],
-      title,
-      body,
-      route,
-      type: "task_assigned",
-      taskId,
-      readBy: [],
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    // 2️⃣ Enviar push si hay token
-    if (!token) return;
-
-    const message = {
-      token,
-      notification: {
-        title,
-        body,
-      },
-      data: {
-        route,
-        taskId,
-      },
-      android: {
-        priority: "high",
-      },
-    };
-
-    const result = await admin.messaging().send(message);
-
-    console.log("[NOTIFY] push enviado:", result);
-
-  } catch (err) {
-    console.error("[NOTIFY] error:", err);
-  }
-}
-
-
 async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-    if (!token) return res.status(401).json({ ok: false, error: "No token" });
+
+    if (!token) {
+      return res.status(401).json({ ok: false, error: "No token" });
+    }
 
     const decoded = await admin.auth().verifyIdToken(token);
     req.uid = decoded.uid;
@@ -95,9 +32,11 @@ async function requireAuth(req, res, next) {
 async function attachRole(req, res, next) {
   try {
     const snap = await usersCol.doc(req.uid).get();
+
     req.role = snap.exists
       ? String(snap.data()?.rol || snap.data()?.role || "empleado").toLowerCase()
       : "empleado";
+
     next();
   } catch (e) {
     return res.status(500).json({ ok: false, error: "No se pudo leer rol" });
@@ -106,12 +45,15 @@ async function attachRole(req, res, next) {
 
 function requireRole(roles = []) {
   const allowed = roles.map((r) => String(r).toLowerCase());
+
   return (req, res, next) => {
     const role = String(req.role || "empleado").toLowerCase();
+
     if (!allowed.includes(role)) {
       console.log("[TASKS] BLOCKED", { role, uid: req.uid });
       return res.status(403).json({ ok: false, error: "No autorizado" });
     }
+
     console.log("[TASKS] ALLOWED", { role, uid: req.uid });
     next();
   };
@@ -143,7 +85,7 @@ function normalizeEstado(s) {
   if (low === "en proceso" || low === "en_proceso") return "En proceso";
   if (low === "pendiente") return "Pendiente";
 
-  return v ? v : "Pendiente";
+  return v || "Pendiente";
 }
 
 function pickTask(body = {}) {
@@ -336,25 +278,57 @@ router.get("/mias", async (req, res) => {
 ========================= */
 router.post("/", requireRole(["admin", "supervisor"]), async (req, res) => {
   try {
+    const t = pickTask({
+      ...req.body,
+      createdBy: req.uid,
+    });
+
+    const err = validateTask(t);
+    if (err) {
+      return res.status(400).json({ ok: false, error: err });
+    }
+
+    const docRef = await col.add({
+      ...t,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
     const taskId = docRef.id;
 
-const notifTitle = "Nueva tarea asignada";
+    const notifTitle = "Nueva tarea asignada";
+    const notifBody = t.zoneNombre
+      ? `Se te asignó una tarea en ${t.zoneNombre}`
+      : "Se te asignó una nueva tarea";
 
-const notifBody = t.zoneNombre
-  ? `Se te asignó una tarea en ${t.zoneNombre}`
-  : "Se te asignó una nueva tarea";
+    console.log("[TASKS][POST] tarea creada:", taskId);
+    console.log("[TASKS][POST] employeeId:", t.employeeId);
 
-await notifyEmployee({
-  employeeId: t.employeeId,
-  title: notifTitle,
-  body: notifBody,
-  route: "/tareas",
-  taskId,
-});
+    let notificationId = null;
 
-    console.log(" INTENTANDO ENVIAR PUSH");
+    try {
+      notificationId = await createInternalNotification({
+        employeeId: t.employeeId,
+        title: notifTitle,
+        body: notifBody,
+        route: "/tareas",
+        type: "task_assigned",
+        taskId,
+        extra: {
+          zoneId: t.zoneId,
+          zoneNombre: t.zoneNombre,
+          prioridad: t.prioridad,
+          createdBy: req.uid,
+        },
+      });
 
-    // 2) Enviar push real al celular
+      console.log("[TASKS][POST] notificación creada:", notificationId);
+    } catch (notifError) {
+      console.error("[TASKS][POST] error guardando notificación:", notifError);
+    }
+
+    console.log("[TASKS][POST] intentando enviar push");
+
     const pushResult = await sendPushToUser({
       employeeId: t.employeeId,
       title: notifTitle,
