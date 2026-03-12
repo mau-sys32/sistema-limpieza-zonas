@@ -3,7 +3,8 @@ import { db, FieldValue } from "../../firebaseAdmin.js";
 
 const router = Router();
 
-const reportsCol = db.collection("reports");
+const publicReportsCol = db.collection("reports_public");
+const notificationsCol = db.collection("notifications");
 
 /* =========================
    POST /api/reportes-publicos
@@ -24,17 +25,34 @@ router.post("/", async (req, res) => {
     }
 
     const doc = {
-      nombre,
+      reporterNombre: nombre,
       departamento,
-      zona,
+      area: zona,
       comentarios,
-      photoURL,
+      photoUrl: photoURL,
       status: "pendiente",
       source: "quick-report-public",
       createdAt: FieldValue.serverTimestamp(),
     };
 
-    const ref = await reportsCol.add(doc);
+    const ref = await publicReportsCol.add(doc);
+
+    await notificationsCol.add({
+      audienceTags: ["role:admin", "role:supervisor"],
+      title: "Nuevo reporte recibido",
+      body: zona
+        ? `${nombre} envió un reporte rápido en ${zona}`
+        : `${nombre} envió un reporte rápido`,
+      type: "quick_report",
+      route: "/reportes",
+      reportId: ref.id,
+      readBy: [],
+      createdAt: FieldValue.serverTimestamp(),
+      reporterNombre: nombre,
+      area: zona,
+      departamento,
+      source: "quick-report-public",
+    });
 
     return res.status(201).json({
       ok: true,
@@ -53,7 +71,6 @@ router.post("/", async (req, res) => {
 
 /* =========================
    POST /api/reportes-publicos/photo
-   Aquí de momento solo recibe una URL ya subida
 ========================= */
 router.post("/photo", async (req, res) => {
   try {
